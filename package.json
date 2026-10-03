@@ -1,0 +1,19 @@
+{
+  "name": "servis-takip",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "web": "npm run dev -w @servis/web",
+    "web:build": "npm run build -w @servis/web",
+    "mobile": "npm run start -w @servis/mobile",
+    "typecheck": "tsc -p packages/shared && tsc -p apps/mobile --noEmit && npm run build -w @servis/web",
+    "db:reset": "supabase db reset",
+    "db:test": "psql \"$DB_URL\" -v ON_ERROR_STOP=1 -f supabase/tests/rls_isolation.sql"
+  },
+  "devDependencies": {
+    "supabase": "^2.119.0"
+  }
+}

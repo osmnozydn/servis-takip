@@ -1,0 +1,69 @@
+ #  |                              Test                               | Sonuç 
+----+-----------------------------------------------------------------+-------
+  1 | A sürücüsü başka şirketin aracına konum YAZAMAZ                 | GEÇTİ
+  2 | A sürücüsü kendi şirketindeki BAŞKA araca konum yazamaz         | GEÇTİ
+  3 | A sürücüsü company_id=B vererek konum yazamaz                   | GEÇTİ
+  4 | A sürücüsü başkası adına (driver_id) konum yazamaz              | GEÇTİ
+  5 | Son görülen konum: eski tarihli kayıt yeni kaydı ezmedi         | GEÇTİ
+  6 | Son görülen konum: her araç için tek satır                      | GEÇTİ
+  7 | A admin: diğer şirketin hiçbir satırını göremez (8 tablo)       | GEÇTİ
+  8 | A sürücü: diğer şirketin hiçbir satırını göremez (8 tablo)      | GEÇTİ
+  9 | A yolcu: diğer şirketin hiçbir satırını göremez (8 tablo)       | GEÇTİ
+ 10 | B admin: diğer şirketin hiçbir satırını göremez (8 tablo)       | GEÇTİ
+ 11 | B sürücü: diğer şirketin hiçbir satırını göremez (8 tablo)      | GEÇTİ
+ 12 | B yolcu: diğer şirketin hiçbir satırını göremez (8 tablo)       | GEÇTİ
+ 13 | A admin: kendi şirketi                                          | GEÇTİ
+ 14 | A admin: tüm A araçları                                         | GEÇTİ
+ 15 | A admin: tüm A profilleri                                       | GEÇTİ
+ 16 | A admin: tüm A durakları                                        | GEÇTİ
+ 17 | A admin: tüm A saat pencereleri                                 | GEÇTİ
+ 18 | A admin: A devamsızlıkları                                      | GEÇTİ
+ 19 | A admin: A konum geçmişi                                        | GEÇTİ
+ 20 | A admin: A araçlarının son konumu (pencereden bağımsız)         | GEÇTİ
+ 21 | A admin: company_id=B ile araç ekleyemez                        | GEÇTİ
+ 22 | A admin: company_id vermeden eklediği araç A şirketine yazılır  | GEÇTİ
+ 23 | A admin: yeni araç A şirketinde                                 | GEÇTİ
+ 24 | A admin: B yolcusuna durak ekleyemez                            | GEÇTİ
+ 25 | A admin: A yolcusuna B aracını atayamaz (bileşik FK)            | GEÇTİ
+ 26 | A admin: B şirketine pencere ekleyemez                          | GEÇTİ
+ 27 | A admin: B yolcusuna devamsızlık ekleyemez                      | GEÇTİ
+ 28 | A admin: B araçlarını GÜNCELLEYEMEZ (0 satır)                   | GEÇTİ
+ 29 | A admin: B profillerini SİLEMEZ (0 satır)                       | GEÇTİ
+ 30 | A admin: B şirketini GÜNCELLEYEMEZ (0 satır)                    | GEÇTİ
+ 31 | A admin: kendi kaydının company_id değerini B yapamaz           | GEÇTİ
+ 32 | A admin: yolcu dışındaki birine durak tanımlayamaz              | GEÇTİ
+ 33 | A sürücü: yalnızca kendi aracı                                  | GEÇTİ
+ 34 | A sürücü: kendisi + A1 yolcusu                                  | GEÇTİ
+ 35 | A sürücü: yalnızca A1 durakları                                 | GEÇTİ
+ 36 | A sürücü: A2 yolcusunun devamsızlığını görmez                   | GEÇTİ
+ 37 | A sürücü: kendi aracının son konumu                             | GEÇTİ
+ 38 | A sürücü: araç ekleyemez                                        | GEÇTİ
+ 39 | A sürücü: kendi rolünü admin yapamaz                            | GEÇTİ
+ 40 | A yolcu1: kendi servis aracı                                    | GEÇTİ
+ 41 | A yolcu1: kendisi + sürücüsü (diğer yolcular gizli)             | GEÇTİ
+ 42 | A yolcu1: yalnızca kendi durağı                                 | GEÇTİ
+ 43 | A yolcu1: pencere açık → aracın son konumunu görür              | GEÇTİ
+ 44 | A yolcu1: pencere açık → yalnızca son 15 dk konumlar            | GEÇTİ
+ 45 | A yolcu1: B aracının konumunu görmez (B penceresi açık olsa da) | GEÇTİ
+ 46 | A yolcu1: bugün için devamsızlık ekleyebilir                    | GEÇTİ
+ 47 | A yolcu1: geçmiş tarihe devamsızlık ekleyemez                   | GEÇTİ
+ 48 | A yolcu1: başka yolcu adına devamsızlık ekleyemez               | GEÇTİ
+ 49 | A yolcu1: konum yazamaz                                         | GEÇTİ
+ 50 | A yolcu1: kendi adını değiştirebilir                            | GEÇTİ
+ 51 | A yolcu1: kendini başka araca atayamaz                          | GEÇTİ
+ 52 | A yolcu1: durağını değiştiremez (0 satır)                       | GEÇTİ
+ 53 | A yolcu2: araç bilgisini (plaka) görür                          | GEÇTİ
+ 54 | A yolcu2: pencere kapalı → son konumu GÖREMEZ                   | GEÇTİ
+ 55 | A yolcu2: pencere kapalı → konum geçmişi GÖREMEZ                | GEÇTİ
+ 56 | A yolcu2: pencerelerini görür (ne zaman açılacağını bilsin)     | GEÇTİ
+ 57 | A sürücü2: pencere kapalı olsa da kendi aracının konumunu görür | GEÇTİ
+ 58 | A yolcu2: pencere açılınca son konumu görür                     | GEÇTİ
+ 59 | Yolcu araç değiştirince durağı yeni araca taşındı               | GEÇTİ
+ 60 | anon: tablolara erişemez                                        | GEÇTİ
+ 61 | anon: profilleri okuyamaz                                       | GEÇTİ
+ 62 | anon: health() çalışır                                          | GEÇTİ
+
+          ÖZET          
+------------------------
+ 62 testin tamamı geçti
+
