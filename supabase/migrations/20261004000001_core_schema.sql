@@ -321,9 +321,24 @@ alter table public.absences               enable row level security;
 alter table public.vehicle_positions      enable row level security;
 alter table public.vehicle_last_positions enable row level security;
 
+-- Tablo yetkileri AÇIKÇA verilir ("Automatically expose new tables" kapalı
+-- projede de, açık projede de aynı sonucu verir).
 -- anon (giriş yapmamış) hiçbir tabloya erişemez.
-revoke all on all tables in schema public from anon;
-revoke all on all sequences in schema public from anon;
+revoke all on all tables    in schema public from anon, authenticated;
+revoke all on all sequences in schema public from anon, authenticated;
+
+grant select, update                 on public.companies              to authenticated;
+grant select, insert, update, delete on public.vehicles               to authenticated;
+grant select, insert, update, delete on public.profiles               to authenticated;
+grant select, insert, update, delete on public.stops                  to authenticated;
+grant select, insert, update, delete on public.visibility_windows     to authenticated;
+grant select, insert, delete         on public.absences               to authenticated;
+grant select, insert                 on public.vehicle_positions      to authenticated;
+grant select                         on public.vehicle_last_positions to authenticated;
+
+-- Edge Function'lar (service_role) için tam yetki; service_role RLS'yi atlar.
+grant all on all tables    in schema public to service_role;
+grant all on all sequences in schema public to service_role;
 
 -- Not: (select fn()) kalıbı, fonksiyonun satır başına değil sorgu başına
 -- bir kez çalışmasını sağlar (Supabase performans önerisi).
