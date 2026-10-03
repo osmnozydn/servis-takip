@@ -35,7 +35,7 @@ Testler tek transaction içinde çalışır ve sonunda ROLLBACK eder; veritaban�
 DB_URL="postgresql://postgres:...@...:5432/postgres" npm run db:test
 ```
 
-Beklenen çıktı: `62 testin tamamı geçti`.
+Beklenen çıktı: `62 testin tamamı geçti`. Giriş testleri: `supabase/tests/login.sql` (16 test).
 
 Supabase olmadan, düz Postgres'te denemek için önce `supabase/tests/support/supabase_shim.sql`, ardından migration'ı çalıştırın (bu shim'i gerçek projede çalıştırmayın).
 
@@ -58,6 +58,36 @@ npx expo start --dev-client                          # cihazdaki uygulamadan ba�
 ```
 
 Alternatif (yerel, Android Studio kurulu ise): `npx expo run:android`.
+
+## Giriş sistemi (Faz 2)
+
+Giriş: **şirket kodu + kullanıcı adı veya telefon + şifre**.
+Kullanıcıların gerçek e-postası yoktur; `public.login_email()` şirket kodu ve kullanıcı adı/telefondan
+gizli bir giriş kimliği (`u-<rastgele>@servis.local`) üretir. Var olmayan kullanıcı için de aynı biçimde
+bir değer döner; dışarıdan hangi kullanıcıların kayıtlı olduğu anlaşılamaz.
+
+Akış: giriş → (ilk girişte) şifre değiştirme → KVKK aydınlatma + açık rıza → ana ekran.
+KVKK metni `packages/shared/src/consent.ts` içinde **taslaktır**; canlıdan önce hukukçu kontrolü gerekir.
+
+### Edge Function'lar
+
+| Fonksiyon | Amaç |
+|---|---|
+| `admin-users` | Yönetici: kullanıcı oluşturma, şifre sıfırlama, silme (yalnızca kendi şirketinde) |
+| `dev-seed` | **Geliştirme:** demo şirketlerini ve sanal kullanıcıları yeniden kurar |
+| `dev-e2e` | **Geliştirme:** sanal kullanıcılarla uçtan uca test (38 test) |
+
+`dev-*` fonksiyonları veritabanındaki gizli anahtarla korunur ve canlıya çıkmadan önce silinecektir.
+Son uçtan uca test çıktısı: `supabase/tests/son_e2e_ciktisi.txt`.
+
+### Demo hesaplar (şifre: `Demo.2026!`)
+
+| Şirket kodu | Kullanıcı | Rol |
+|---|---|---|
+| `demo` | `yonetici` | Yönetici |
+| `demo` | `surucu1` (34 DMO 01), `surucu2` (34 DMO 02) | Sürücü |
+| `demo` | `yolcu1` … `yolcu8` (telefonla da: 0555 000 01 01 …) | Yolcu |
+| `demo-b` | `yonetici`, `surucu1`, `yolcu1` | İzolasyon testi için ikinci şirket |
 
 ## Şema özeti (Faz 1)
 

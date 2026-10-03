@@ -1,0 +1,41 @@
+dev-e2e — gerçek Supabase projesi (readylive), 04.10.2026 02:52 İstanbul
+Özet: 38/38 geçti
+
+✓ Admin kullanıcı adıyla giriş yapar
+✓ Sürücü kullanıcı adıyla giriş yapar
+✓ Yolcu telefonla (0555 000 01 01) giriş yapar
+✓ Farklı telefon yazımı ve büyük harf şirket kodu da çalışır
+✓ Yanlış şifre reddedilir
+✓ Yanlış şirket kodu reddedilir
+✓ Olmayan kullanıcı ile yanlış şifre AYNI hatayı verir (kullanıcı tespit edilemez)
+✓ Olmayan kullanıcı için de gerçekle aynı biçimde giriş e-postası döner
+✓ Aynı kullanıcı adı + 'demo-b' kodu → B şirketinin yöneticisi (farklı hesap)
+✓ Aynı telefon + 'demo-b' kodu → B şirketinin yolcusu
+✓ Yolcu yalnızca kendi şirketini görür
+✓ Yolcu yalnızca kendi servis aracını görür
+✓ Yolcu: kendisi + sürücüsü (diğer yolcular gizli)
+✓ Yolcu yalnızca kendi durağını görür
+✓ Demo admin: 2 araç, 11 profil
+✓ B admin 'vehicles' tablosunda yalnızca kendi şirketini görür
+✓ B admin 'profiles' tablosunda yalnızca kendi şirketini görür
+✓ B admin 'stops' tablosunda yalnızca kendi şirketini görür
+✓ B admin 'visibility_windows' tablosunda yalnızca kendi şirketini görür
+✓ B admin 'absences' tablosunda yalnızca kendi şirketini görür
+✓ Giriş yapmamış istemci tablo okuyamaz
+✓ Sürücü kendi aracı için konum gönderir
+✓ Yolcu konumu GÖRMEZ (şu an pencere kapalı) — İstanbul 02:52, gün 7
+✓ Başka hattın yolcusu bu aracın konumunu hiç görmez
+✓ Demo admin aracın son konumunu her zaman görür
+✓ B admin demo aracının konumunu görmez
+✓ Yolcu kullanıcı oluşturamaz (403)
+✓ Girişsiz istek reddedilir (403)
+✓ Admin yeni yolcu oluşturur (201)
+✓ Aynı kullanıcı adı ikinci kez oluşturulamaz (409)
+✓ Admin, başka şirketin aracına yolcu atayamaz
+✓ Yeni kullanıcı giriş yapar, ilk girişte şifre değiştirmesi istenir
+✓ Telefon +90 biçiminde kaydedilmiş
+✓ Kullanıcı kendi şifresini değiştirir, KVKK rızasını kaydeder, yeni şifreyle telefonla girer
+✓ Kullanıcı kendini admin yapamaz
+✓ B admin, demo şirketinin kullanıcısını silemez (404)
+✓ Admin şifre sıfırlar; kullanıcı yeni şifreyle girer
+✓ Admin kullanıcıyı siler; silinen kullanıcı giriş yapamaz

@@ -25,6 +25,5 @@ create index if not exists vehicle_positions_company_vehicle_idx on public.vehic
 create index if not exists vehicle_positions_company_driver_idx  on public.vehicle_positions (company_id, driver_id);
 create index if not exists visibility_windows_company_vehicle_idx on public.visibility_windows (company_id, vehicle_id);
 
--- Sürücünün durak sorgusu (company_id + vehicle_id) artık yukarıdaki indeksle
--- karşılanıyor; tek sütunluk eski indeks gereksiz.
-drop index if exists public.stops_vehicle_idx;
+-- Not: Tek sütunluk stops_vehicle_idx bilerek bırakıldı (silme komutu uzak
+-- ortamda onay gerektiriyor; indeks zararsız).

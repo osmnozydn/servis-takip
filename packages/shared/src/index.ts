@@ -4,9 +4,6 @@
 
 export const APP_TIMEZONE = 'Europe/Istanbul';
 
-/** Giriş için kullanılan sentetik e-posta alan adı (Faz 2). */
-export const SYNTHETIC_EMAIL_DOMAIN = 'servis.local';
-
 export type UserRole = 'admin' | 'driver' | 'passenger';
 
 export interface Company {
@@ -23,6 +20,9 @@ export interface Profile {
   phone: string | null;
   full_name: string;
   vehicle_id: string | null;
+  consent_version: string | null;
+  consent_at: string | null;
+  must_change_password: boolean;
 }
 
 export interface Vehicle {
@@ -85,7 +85,5 @@ export interface Absence {
   date: string; // "2026-10-05"
 }
 
-/** Sentetik giriş e-postası: kullaniciadi@sirketkodu.servis.local */
-export function syntheticEmail(companyCode: string, username: string): string {
-  return `${username.trim().toLowerCase()}@${companyCode.trim().toLowerCase()}.${SYNTHETIC_EMAIL_DOMAIN}`;
-}
+export * from './auth';
+export * from './consent';
