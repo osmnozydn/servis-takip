@@ -75,10 +75,12 @@ KVKK metni `packages/shared/src/consent.ts` içinde **taslaktır**; canlıdan ö
 |---|---|
 | `admin-users` | Yönetici: kullanıcı oluşturma, şifre sıfırlama, silme (yalnızca kendi şirketinde) |
 | `dev-seed` | **Geliştirme:** demo şirketlerini ve sanal kullanıcıları yeniden kurar |
-| `dev-e2e` | **Geliştirme:** sanal kullanıcılarla uçtan uca test (38 test) |
+| `compute-route` | Bugünkü rotayı hesaplar (Google Routes; anahtar yoksa yedek algoritma). Sürücü servise başlayınca ve yolcu devamsızlık bildirince çalışır |
+| `dev-e2e` | **Geliştirme:** sanal kullanıcılarla uçtan uca test (47 test, sonuç `dev_test_runs` tablosuna) |
+| `dev-sim` | **Geliştirme:** canlı konum simülasyonu (16 test, gecikme ölçümü) |
 
 `dev-*` fonksiyonları veritabanındaki gizli anahtarla korunur ve canlıya çıkmadan önce silinecektir.
-Son uçtan uca test çıktısı: `supabase/tests/son_e2e_ciktisi.txt`.
+Son test çıktıları: `supabase/tests/son_e2e_ciktisi.txt`, `supabase/tests/son_simulasyon_ciktisi.txt`.
 
 ### Demo hesaplar (şifre: `Demo.2026!`)
 
@@ -88,6 +90,26 @@ Son uçtan uca test çıktısı: `supabase/tests/son_e2e_ciktisi.txt`.
 | `demo` | `surucu1` (34 DMO 01), `surucu2` (34 DMO 02) | Sürücü |
 | `demo` | `yolcu1` … `yolcu8` (telefonla da: 0555 000 01 01 …) | Yolcu |
 | `demo-b` | `yonetici`, `surucu1`, `yolcu1` | İzolasyon testi için ikinci şirket |
+
+## Canlı konum, rota, devamsızlık (Faz 3–6)
+
+**Sürücü:** uygulamaya girince konum yayını otomatik başlar (arka plan görevi, Android'de kalıcı bildirim).
+İnternet yoksa konumlar cihazda kuyruğa alınır. Her konum `vehicle_positions`'a yazılır; tetikleyici
+`vehicle_last_positions`'ı (son görülen konum) günceller. Uygulama kapatılınca son görülen konum orada kalır.
+Konum geçmişi 30 gün sonra otomatik silinir (pg_cron).
+
+**Yolcu:** aracın konumunu yalnızca tanımlı saat aralığında görür (`my_visibility_state()`; kural RLS'de).
+Kapalıyken "bir sonraki: yarın 06:30" gibi bilgi gösterilir. Kendi sırasını ve tahmini varış süresini
+`my_route_info()` ile görür; diğer yolcuların durakları gizlidir.
+
+**Rota:** `compute-route` başlangıç (sürücünün konumu) → duraklar → bitiş (aracın `end_lat/lng` noktası
+veya en uzak durak). `GOOGLE_MAPS_API_KEY` sırrı tanımlanınca Google Routes API (`optimizeWaypointOrder`)
+kullanılır; tanımlı değilse en yakın komşu + 2-opt yedek algoritması çalışır.
+
+**Devamsızlık:** yolcu "Bugün kullanmayacağım" deyince durak bugünkü rotadan saniyeler içinde çıkar
+(veritabanı tetikleyicisi → `compute-route`); geri alınca tekrar eklenir.
+
+**Harita:** şimdilik Leaflet + OpenStreetMap (anahtarsız). Canlıdan önce Google Maps'e geçilecek.
 
 ## Şema özeti (Faz 1)
 

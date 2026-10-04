@@ -1,0 +1,25 @@
+dev-sim — canlı konum simülasyonu, gerçek Supabase projesi, 04.10.2026 ~14:00 İstanbul
+Sanal sürücü (surucu1) Moda → Üsküdar rotasında 12 konum gönderir; sanal yolcular
+Realtime ile dinler.
+Özet: 16/16 geçti · Gecikme (gönderim → yolcunun telefonuna): min 59 ms, medyan 334 ms, maks 550 ms
+
+✓ Realtime akışı başladı (ısınma 3 sn)
+✓ Başlangıçta yolcu1 için pencere kapalı
+✓ A) Pencere kapalıyken yolcuya HİÇ mesaj gitmez
+✓ A) Admin pencere kapalıyken de 3 mesajın hepsini alır
+✓ Geçici pencere eklenince yolcu1 için pencere açık
+✓ B) Yolcu, rota boyunca gönderilen 12 konumun hepsini alır
+✓ B) Konumlar doğru sırada gelir (son mesaj = Üsküdar)
+✓ B) Gecikme: medyan 334 ms (hedef < 2000 ms)
+✓ B) Admin de tüm konumları alır
+✓ B) Başka hattın yolcusu (V2) bu aracın hiçbir konumunu almaz
+✓ B) Başka şirketin yöneticisi hiçbir konum almaz
+✓ C) Son görülen konum = uygulamanın kapandığı nokta (Üsküdar)
+✓ C) Pencere açıkken yolcu da son görülen konumu sorgulayabilir
+✓ D) Pencere kapanınca yolcu son konumu artık göremez
+✓ D) Pencere kapandıktan sonra gönderilen konum yolcuya gitmez
+✓ D) Admin son konumu görmeye devam eder
+
+Not: Ücretsiz planda Realtime bir süre kullanılmazsa uykuya geçer; ilk bağlantıda
+akışın başlaması ~1 dk sürebilir (kayıtlarda 74 sn ölçüldü). Uygulama açıkken sürekli
+bağlantı olduğu için servis saatlerinde sorun olmaz; Pro planda bu bekleme yoktur.

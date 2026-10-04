@@ -1,5 +1,5 @@
-dev-e2e — gerçek Supabase projesi (readylive), 04.10.2026 02:52 İstanbul
-Özet: 38/38 geçti
+dev-e2e — gerçek Supabase projesi (readylive), 04.10.2026 14:04 İstanbul
+Özet: 47/47 geçti (9 sn)
 
 ✓ Admin kullanıcı adıyla giriş yapar
 ✓ Sürücü kullanıcı adıyla giriş yapar
@@ -16,14 +16,10 @@ dev-e2e — gerçek Supabase projesi (readylive), 04.10.2026 02:52 İstanbul
 ✓ Yolcu: kendisi + sürücüsü (diğer yolcular gizli)
 ✓ Yolcu yalnızca kendi durağını görür
 ✓ Demo admin: 2 araç, 11 profil
-✓ B admin 'vehicles' tablosunda yalnızca kendi şirketini görür
-✓ B admin 'profiles' tablosunda yalnızca kendi şirketini görür
-✓ B admin 'stops' tablosunda yalnızca kendi şirketini görür
-✓ B admin 'visibility_windows' tablosunda yalnızca kendi şirketini görür
-✓ B admin 'absences' tablosunda yalnızca kendi şirketini görür
+✓ B admin 'vehicles' / 'profiles' / 'stops' / 'visibility_windows' / 'absences' tablolarında yalnızca kendi şirketini görür (5 test)
 ✓ Giriş yapmamış istemci tablo okuyamaz
 ✓ Sürücü kendi aracı için konum gönderir
-✓ Yolcu konumu GÖRMEZ (şu an pencere kapalı) — İstanbul 02:52, gün 7
+✓ Yolcu konumu GÖRMEZ (şu an pencere kapalı) — İstanbul 14:04, Pazar
 ✓ Başka hattın yolcusu bu aracın konumunu hiç görmez
 ✓ Demo admin aracın son konumunu her zaman görür
 ✓ B admin demo aracının konumunu görmez
@@ -39,3 +35,12 @@ dev-e2e — gerçek Supabase projesi (readylive), 04.10.2026 02:52 İstanbul
 ✓ B admin, demo şirketinin kullanıcısını silemez (404)
 ✓ Admin şifre sıfırlar; kullanıcı yeni şifreyle girer
 ✓ Admin kullanıcıyı siler; silinen kullanıcı giriş yapamaz
+✓ Yolcu rota hesaplatamaz (403)
+✓ Başka şirketin yöneticisi rota hesaplatamaz (403)
+✓ Sürücü servise başlayınca rota hesaplanır (4 durak)
+✓ Rota tüm durakları bir kez içerir
+✓ Yolcu kendi sırasını ve tahmini varış süresini görür
+✓ Yolcu 'Bugün kullanmayacağım' der
+✓ Durağı bugünkü rotadan OTOMATİK çıkarılır (3 durak, Üsküdar yok)
+✓ Yolcu ekranı 'bugün yoksunuz' gösterir
+✓ Yolcu geri alınca durağı rotaya geri eklenir
