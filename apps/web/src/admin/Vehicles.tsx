@@ -5,7 +5,7 @@ import {
   deleteOwnerDocuments, pgError, VEHICLE_COLUMNS, VEHICLE_DOCS, WEEKDAYS, type VehicleRow,
 } from './common';
 import { StopMap, type PickedPoint } from './StopMap';
-import { Avatar, DocDraftPicker, DocumentsPanel, draftCount, Field, Notice, uploadDrafts, useThumbs, type DocDrafts } from './ui';
+import { Avatar, DocDraftPicker, Plate, DocumentsPanel, draftCount, Field, Notice, uploadDrafts, useThumbs, type DocDrafts } from './ui';
 
 type Counts = Record<string, { driver?: string; passengers: number }>;
 
@@ -47,14 +47,14 @@ export function Vehicles({ companyId }: { companyId: string }) {
             <thead><tr><th /><th>Plaka</th><th>Hat adı</th><th>Marka / model</th><th>Kapasite</th><th>Sürücü</th><th>Yolcu</th><th>Rota</th><th /></tr></thead>
             <tbody>{rows.map((v) => (
               <tr key={v.id} onClick={() => setEdit(v)}>
-                <td><Avatar url={thumbs[v.id]} name={v.plate.replace(/\d/g, '')} /></td>
-                <td><b>{v.plate}</b></td><td>{v.name ?? '—'}</td>
+                <td>{thumbs[v.id] ? <Avatar url={thumbs[v.id]} name={v.plate} /> : null}</td>
+                <td><Plate plate={v.plate} /></td><td>{v.name ?? '—'}</td>
                 <td>{[v.brand_model, v.color].filter(Boolean).join(' · ') || '—'}</td>
                 <td>{v.capacity ?? '—'}</td>
                 <td>{counts[v.id]?.driver ?? <span className="muted">atanmadı</span>}</td>
                 <td>{counts[v.id]?.passengers ?? 0}{v.capacity ? ` / ${v.capacity}` : ''}</td>
                 <td>{v.route_mode === 'manual' ? 'Alış sırası' : 'Otomatik'}</td>
-                <td className="go">Düzenle →</td>
+                <td className="go">Düzenle</td>
               </tr>
             ))}</tbody>
           </table>
@@ -153,7 +153,7 @@ function VehicleForm({ companyId, vehicle, onClose }: { companyId: string; vehic
   return (
     <section>
       <button className="ghost small back" onClick={onClose}>← Araçlar</button>
-      <h2>{isNew ? 'Yeni araç' : vehicle!.plate}</h2>
+      <h2>{isNew ? 'Yeni araç' : <Plate plate={vehicle!.plate} size="lg" />}</h2>
       <form onSubmit={submit} className="formgrid">
         <h3 className="span2">Araç bilgileri</h3>
         <Field label="Plaka *"><input value={plate} required placeholder="34 ABC 123" onChange={(e) => setPlate(e.target.value)} /></Field>

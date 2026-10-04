@@ -14,6 +14,7 @@ import {
 } from '../location/tracking';
 import { Button, Card, ErrorBox, Screen } from '../ui/components';
 import { LiveMap } from '../ui/LiveMap';
+import { VehicleCard } from '../ui/VehicleCard';
 import { colors } from '../ui/theme';
 
 type RouteStop = { passenger_id: string; lat: number; lng: number; address: string | null; eta_s: number };
@@ -201,6 +202,9 @@ export function DriverHomeScreen() {
         )}
         <Button title="Rotayı yeniden hesapla" variant="ghost" onPress={() => computeRoute(vehicleId)} />
       </Card>
+
+      <View style={{ height: 16 }} />
+      <VehicleCard mode="driver" />
 
       <Button title="Çıkış yap" variant="ghost" onPress={async () => { await stop(); await signOut(); }} />
     </Screen>

@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-semi-condensed": "^5.3.0",
     "@servis/shared": "*",
     "@supabase/supabase-js": "^2.117.2",
     "leaflet": "^1.9.4",

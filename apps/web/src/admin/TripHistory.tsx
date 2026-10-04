@@ -80,7 +80,7 @@ export function TripHistory() {
                     <td>
                       {s ? <>{s.arrived}/{s.total} varıldı{s.missed ? <span className="tag missed">{s.missed} uğranmadı</span> : null}</> : '—'}
                     </td>
-                    <td className="go">İncele →</td>
+                    <td className="go">İncele</td>
                   </tr>
                 );
               })}

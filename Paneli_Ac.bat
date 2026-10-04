@@ -18,17 +18,15 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist "node_modules\" (
-  echo  İlk çalıştırma: gerekli paketler kuruluyor, birkaç dakika sürebilir...
+echo  Paketler kontrol ediliyor (güncelleme varsa kurulur)...
+call npm install --no-audit --no-fund --loglevel=error
+if errorlevel 1 (
   echo.
-  call npm install
-  if errorlevel 1 (
-    echo.
-    echo  [HATA] Paketler kurulamadı. Yukarıdaki hatayı Claude'a iletin.
-    pause
-    exit /b 1
-  )
+  echo  [HATA] Paketler kurulamadı. Yukarıdaki hatayı Claude'a iletin.
+  pause
+  exit /b 1
 )
+echo.
 
 echo  Site başlatılıyor. Tarayıcı birkaç saniye içinde açılacak.
 echo  Adres: http://localhost:5173

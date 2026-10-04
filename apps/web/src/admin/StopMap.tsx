@@ -43,7 +43,7 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus }
   const markers = useRef<Record<string, L.Marker>>({});
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
-  const fitted = useRef(false);
+  const fitted = useRef('');  // hangi durak kümesine sığdırıldı
 
   useEffect(() => {
     if (!el.current) return;
@@ -78,7 +78,9 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus }
     }
     if (stops.length > 1) L.polyline(stops.map((s) => [s.lat, s.lng] as L.LatLngTuple), { color: '#1F4E79', weight: 2, dashArray: '6 6', opacity: .6 }).addTo(g);
     if (picked) pts.push([picked.lat, picked.lng]);
-    if (pts.length && !fitted.current) { m.fitBounds(L.latLngBounds(pts), { padding: [30, 30], maxZoom: 15, animate: false }); fitted.current = true; }
+    // Durak kümesi değiştiğinde (ilk yükleme, durak eklendi/çıkarıldı) yeniden sığdır; yalnızca sıra değişince haritayı oynatma
+    const setKey = stops.map((s) => s.id).sort().join(',') + (end ? '|end' : '');
+    if (pts.length && fitted.current !== setKey) { m.fitBounds(L.latLngBounds(pts), { padding: [30, 30], maxZoom: 15, animate: false }); fitted.current = setKey; }
   }, [stops, end]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Seçilen nokta

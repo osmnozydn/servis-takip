@@ -9,6 +9,7 @@ import { supabase } from '../lib/supabase';
 import { ago, duration, friendlyNextOpen, todayTR } from '../lib/time';
 import { Button, Card, ErrorBox, Screen } from '../ui/components';
 import { LiveMap, type MapPoint } from '../ui/LiveMap';
+import { VehicleCard } from '../ui/VehicleCard';
 import { colors } from '../ui/theme';
 
 type Visibility = { has_vehicle: boolean; open?: boolean; open_until?: string | null; next_open?: string | null };
@@ -113,6 +114,8 @@ export function PassengerHomeScreen() {
 
       {vis?.has_vehicle ? (
         <>
+          <View style={{ height: 16 }} />
+          <VehicleCard mode="passenger" />
           <View style={{ height: 16 }} />
           <Card>
             <Text style={styles.h}>Bugün</Text>

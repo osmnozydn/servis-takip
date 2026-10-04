@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
   acceptConsent, changePassword, consentCheckboxLabel, consentSections, loadProfile, MIN_PASSWORD_LENGTH,
   nextStep, ROLE_LABELS, signIn, validateNewPassword, type SessionProfile,
 } from '@servis/shared';
 import { isConfigured, supabase } from './lib/supabase';
+import { AdminLayout, type Page } from './layout/AdminLayout';
+import { RouteArt } from './layout/RouteArt';
+import { Dashboard } from './admin/Dashboard';
 import { TripHistory } from './admin/TripHistory';
 import { Platform } from './admin/Platform';
 import { Vehicles } from './admin/Vehicles';
@@ -34,8 +37,8 @@ export default function App() {
 
   const signOut = async () => { await supabase.auth.signOut(); setProfile(null); };
 
-  if (!isConfigured) return <Shell><p className="err">VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY tanımlı değil (apps/web/.env).</p></Shell>;
-  if (loading) return <Shell><p className="muted">Yükleniyor…</p></Shell>;
+  if (!isConfigured) return <AuthShell><p className="err box">VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY tanımlı değil (apps/web/.env).</p></AuthShell>;
+  if (loading) return <div className="auth-form" style={{ minHeight: '100vh' }}><p className="muted">Yükleniyor…</p></div>;
 
   switch (nextStep(profile)) {
     case 'login': return <Login onDone={refresh} />;
@@ -45,12 +48,25 @@ export default function App() {
   }
 }
 
-function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+/** Giriş ve hesap adımlarının ortak çerçevesi: solda rota çizimi, sağda form */
+function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
-    <main className={wide ? 'card wide' : 'card'}>
-      <div className="brand"><span className="logo">S</span><span>Servis Takip</span></div>
-      {children}
-    </main>
+    <div className={`auth ${wide ? 'auth-wide' : ''}`}>
+      <aside className="auth-art">
+        <div className="brand"><span className="logo">S</span>Servis Takip</div>
+        <h1>Servisleriniz, durak durak.</h1>
+        <p>Araçlarınızı canlı izleyin, yolcuları alış sırasıyla yönetin, her seferin hangi durağa kaçta uğradığını görün.</p>
+        <RouteArt />
+        <ul className="auth-facts">
+          <li>Canlı konum</li>
+          <li>Durak durak rota</li>
+          <li>Sefer geçmişi</li>
+        </ul>
+      </aside>
+      <main className="auth-form">
+        <div className="auth-box">{children}</div>
+      </main>
+    </div>
   );
 }
 
@@ -58,6 +74,7 @@ function Login({ onDone }: { onDone: () => Promise<void> }) {
   const [code, setCode] = useState(storage.get(LAST_CODE_KEY) ?? '');
   const [ident, setIdent] = useState('');
   const [pw, setPw] = useState('');
+  const [show, setShow] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -71,18 +88,29 @@ function Login({ onDone }: { onDone: () => Promise<void> }) {
   }
 
   return (
-    <Shell>
-      <h1>Giriş yap</h1>
-      <p className="muted">Yönetim paneli</p>
+    <AuthShell>
+      <h2>Yönetim paneline giriş</h2>
+      <p className="muted">Şirketinizin kodu ve size verilen bilgilerle giriş yapın.</p>
       <form onSubmit={submit}>
-        {error && <p className="err box">{error}</p>}
-        <label>Şirket kodu<input value={code} onChange={(e) => setCode(e.target.value)} placeholder="örn. demo" autoCapitalize="none" />
-          <small className="muted hint">Platform yöneticisi iseniz: <b>platform</b></small></label>
-        <label>Kullanıcı adı veya telefon<input value={ident} onChange={(e) => setIdent(e.target.value)} placeholder="örn. yonetici" autoCapitalize="none" /></label>
-        <label>Şifre<input type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
-        <button disabled={busy}>{busy ? 'Giriş yapılıyor…' : 'Giriş yap'}</button>
+        {error && <p className="err box" role="alert">{error}</p>}
+        <label>Şirket kodu
+          <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="örn. demo" autoCapitalize="none" autoComplete="organization" />
+        </label>
+        <label>Kullanıcı adı veya telefon
+          <input value={ident} onChange={(e) => setIdent(e.target.value)} placeholder="örn. yonetici" autoCapitalize="none" autoComplete="username" />
+        </label>
+        <label>Şifre
+          <div className="inline">
+            <input type={show ? 'text' : 'password'} value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
+            <button type="button" className="ghost small" onClick={() => setShow(!show)} aria-pressed={show}>{show ? 'Gizle' : 'Göster'}</button>
+          </div>
+        </label>
+        <button type="submit" disabled={busy}>{busy ? 'Giriş yapılıyor…' : 'Giriş yap'}</button>
       </form>
-    </Shell>
+      <div className="auth-foot">
+        Sürücü ve yolcular giriş için mobil uygulamayı kullanır. Platform yöneticisi şirket kodu olarak <b>platform</b> yazar.
+      </div>
+    </AuthShell>
   );
 }
 
@@ -98,18 +126,18 @@ function ChangePassword({ profile, onDone, onSignOut }: { profile: SessionProfil
     setBusy(false);
   }
   return (
-    <Shell>
-      <h1>Şifrenizi belirleyin</h1>
-      <p className="muted">Güvenliğiniz için geçici şifrenizi değiştirin.</p>
+    <AuthShell>
+      <h2>Şifrenizi belirleyin</h2>
+      <p className="muted">Hoş geldiniz, {profile.full_name.split(' ')[0]}. Güvenliğiniz için size verilen geçici şifreyi değiştirin.</p>
       <form onSubmit={submit}>
-        {error && <p className="err box">{error}</p>}
-        <label>Yeni şifre<input type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
-        <small className="muted">En az {MIN_PASSWORD_LENGTH} karakter, bir harf ve bir rakam</small>
-        <label>Yeni şifre (tekrar)<input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} /></label>
-        <button disabled={busy}>Şifreyi kaydet</button>
+        {error && <p className="err box" role="alert">{error}</p>}
+        <label>Yeni şifre<input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" /></label>
+        <small className="muted hint" style={{ marginTop: -8, marginBottom: 14 }}>En az {MIN_PASSWORD_LENGTH} karakter, bir harf ve bir rakam</small>
+        <label>Yeni şifre (tekrar)<input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete="new-password" /></label>
+        <button type="submit" disabled={busy}>Şifreyi kaydet</button>
         <button type="button" className="ghost" onClick={onSignOut}>Çıkış yap</button>
       </form>
-    </Shell>
+    </AuthShell>
   );
 }
 
@@ -122,9 +150,9 @@ function Consent({ profile, onDone, onSignOut }: { profile: SessionProfile; onDo
     setBusy(false);
   }
   return (
-    <Shell wide>
-      <h1>Kişisel Verilerin Korunması</h1>
-      <p className="muted">KVKK Aydınlatma Metni ve Açık Rıza</p>
+    <AuthShell wide>
+      <h2>Kişisel verilerin korunması</h2>
+      <p className="muted">KVKK aydınlatma metni ve açık rıza</p>
       <div className="consent">
         {consentSections(profile.role).map((s) => <section key={s.title}><h3>{s.title}</h3><p>{s.body}</p></section>)}
       </div>
@@ -134,66 +162,50 @@ function Consent({ profile, onDone, onSignOut }: { profile: SessionProfile; onDo
         <button disabled={!checked || busy} onClick={accept}>Onayla ve devam et</button>
         <button className="ghost" onClick={onSignOut}>Onaylamıyorum, çıkış yap</button>
       </div>
-    </Shell>
+    </AuthShell>
   );
 }
 
-type Tab = 'trips' | 'vehicles' | 'drivers' | 'passengers' | 'admins' | 'platform';
-const TABS: { id: Exclude<Tab, 'platform'>; label: string }[] = [
-  { id: 'passengers', label: 'Yolcular ve duraklar' },
-  { id: 'drivers', label: 'Sürücüler' },
-  { id: 'vehicles', label: 'Araçlar' },
-  { id: 'trips', label: 'Sefer geçmişi' },
-  { id: 'admins', label: 'Yöneticiler' },
-];
+const PAGE_TITLES: Record<Page, string> = {
+  overview: 'Genel bakış', passengers: 'Yolcular ve duraklar', drivers: 'Sürücüler', vehicles: 'Araçlar',
+  trips: 'Sefer geçmişi', admins: 'Yöneticiler', platform: 'Şirketler',
+};
 
 function Home({ profile, onSignOut, onRefresh }: { profile: SessionProfile; onSignOut: () => void; onRefresh: () => Promise<void> }) {
   const company = profile.company;
-  const [tab, setTab] = useState<Tab>(profile.is_platform_admin && !company ? 'platform' : 'passengers');
+  const [page, setPage] = useState<Page>(profile.is_platform_admin && !company ? 'platform' : 'overview');
 
   async function enterCompany(id: string | null) {
     await supabase.rpc('platform_enter_company', { p_company: id });
     await onRefresh();
-    setTab(id ? 'passengers' : 'platform');
+    setPage(id ? 'overview' : 'platform');
   }
 
   if (profile.role !== 'admin') {
     return (
-      <Shell>
-        <h1>Merhaba, {profile.full_name.split(' ')[0]}</h1>
-        <p>Bu panel şirket yöneticileri içindir. {ROLE_LABELS[profile.role]} olarak lütfen <b>mobil uygulamayı</b> kullanın.</p>
+      <AuthShell>
+        <h2>Merhaba, {profile.full_name.split(' ')[0]}</h2>
+        <p className="muted">Bu panel şirket yöneticileri içindir. {ROLE_LABELS[profile.role]} olarak lütfen mobil uygulamayı kullanın.</p>
         <button className="ghost" onClick={onSignOut}>Çıkış yap</button>
-      </Shell>
+      </AuthShell>
     );
   }
 
-  const showPlatform = profile.is_platform_admin && (tab === 'platform' || !company);
+  const current: Page = profile.is_platform_admin && !company ? 'platform' : page;
+  const sub = current === 'platform' ? 'Her şirket ayrı bir projedir; birbirlerinin verisini göremezler.' : company ? company.name : '';
+
   return (
-    <Shell wide>
-      <div className="head">
-        <div>
-          {profile.is_platform_admin && <div className="platformbar">Platform yöneticisi{company && <> · <button className="link" onClick={() => setTab('platform')}>Tüm şirketler</button></>}</div>}
-          <h1>{showPlatform ? 'Şirketler' : company?.name}</h1>
-          <p className="muted">{showPlatform ? profile.full_name : <>Şirket kodu: <b>{company?.code}</b> · {profile.full_name}</>}</p>
-        </div>
-        <button className="ghost small" onClick={onSignOut}>Çıkış</button>
+    <AdminLayout profile={profile} page={current} onNavigate={setPage} onSignOut={onSignOut}
+      title={PAGE_TITLES[current]} subtitle={sub}>
+      <div key={`${company?.id ?? 'none'}-${current}`}>
+        {current === 'platform' && <Platform activeCompanyId={company?.id ?? null} onEnter={enterCompany} />}
+        {company && current === 'overview' && <Dashboard name={profile.full_name} onNavigate={setPage} />}
+        {company && current === 'trips' && <section><TripHistory /></section>}
+        {company && current === 'vehicles' && <Vehicles companyId={company.id} />}
+        {company && current === 'drivers' && <Drivers companyId={company.id} companyCode={company.code} />}
+        {company && current === 'passengers' && <Passengers companyId={company.id} companyCode={company.code} />}
+        {company && current === 'admins' && <Admins companyCode={company.code} myId={profile.id} />}
       </div>
-      {showPlatform ? (
-        <Platform activeCompanyId={company?.id ?? null} onEnter={enterCompany} />
-      ) : company && (
-        <>
-          <nav className="tabs">
-            {TABS.map((t) => <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}
-          </nav>
-          <div key={company.id}>
-            {tab === 'trips' && <TripHistory />}
-            {tab === 'vehicles' && <Vehicles companyId={company.id} />}
-            {tab === 'drivers' && <Drivers companyId={company.id} companyCode={company.code} />}
-            {tab === 'passengers' && <Passengers companyId={company.id} companyCode={company.code} />}
-            {tab === 'admins' && <Admins companyCode={company.code} myId={profile.id} />}
-          </div>
-        </>
-      )}
-    </Shell>
+    </AdminLayout>
   );
 }

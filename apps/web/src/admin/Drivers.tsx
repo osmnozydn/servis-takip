@@ -7,7 +7,7 @@ import {
   VEHICLE_COLUMNS, VEHICLE_DOCS, type PersonRow, type VehicleRow,
 } from './common';
 import {
-  Avatar, CredentialsBox, DocDraftPicker, DocumentsPanel, draftCount, ExpiryTag, Field, Notice, PasswordField, uploadDrafts,
+  Avatar, CredentialsBox, Plate, DocDraftPicker, DocumentsPanel, draftCount, ExpiryTag, Field, Notice, PasswordField, uploadDrafts,
   useThumbs, type DocDrafts,
 } from './ui';
 
@@ -49,17 +49,15 @@ export function Drivers(ctx: Ctx) {
       ) : (
         <div className="tablewrap">
           <table className="clickable">
-            <thead><tr><th /><th>Ad soyad</th><th>Kullanıcı adı</th><th>Telefon</th><th>Araç</th><th>Ehliyet</th><th>Ehliyet geçerlilik</th><th>Uyarı</th><th /></tr></thead>
+            <thead><tr><th /><th>Ad soyad</th><th>Kullanıcı adı</th><th>Telefon</th><th>Araç</th><th>Ehliyet</th><th /></tr></thead>
             <tbody>{rows.map((r) => (
               <tr key={r.id} onClick={() => setView(r)}>
                 <td><Avatar url={thumbs[r.id]} name={r.full_name} /></td>
-                <td><b>{r.full_name}</b>{r.must_change_password && <span className="tag pending" title="Henüz ilk girişini yapmadı">ilk giriş bekleniyor</span>}</td>
+                <td><b>{r.full_name}</b>{r.must_change_password && <span className="tag pending" title="Henüz ilk girişini yapmadı">ilk giriş bekleniyor</span>}{expiring[r.id] ? <span className="tag missed" title="Süresi dolan veya 30 gün içinde dolacak belge">{expiring[r.id]} belge</span> : null}</td>
                 <td className="mono">{r.username}</td><td>{formatPhone(r.phone)}</td>
-                <td>{plate(r.vehicle_id) ?? <span className="muted">atanmadı</span>}</td>
-                <td>{r.license_class ?? '—'}</td>
-                <td><ExpiryTag date={r.license_expires_on} /></td>
-                <td>{expiring[r.id] ? <span className="tag missed">{expiring[r.id]} belge</span> : ''}</td>
-                <td className="go">Aç →</td>
+                <td>{plate(r.vehicle_id) ? <Plate plate={plate(r.vehicle_id)!} /> : <span className="muted">atanmadı</span>}</td>
+                <td>{r.license_class ? <b style={{ marginRight: 8 }}>{r.license_class}</b> : null}<ExpiryTag date={r.license_expires_on} /></td>
+                <td className="go">Aç</td>
               </tr>
             ))}</tbody>
           </table>

@@ -209,7 +209,7 @@ export function useThumbs(ownerType: OwnerType, docType: DocType, ownerIds: stri
 
 export function Avatar({ url, name }: { url?: string; name: string }) {
   if (url) return <img className="avatar" src={url} alt="" />;
-  const initials = name.split(' ').filter(Boolean).map((s) => s[0]).slice(0, 2).join('').toLocaleUpperCase('tr-TR');
+  const initials = name.split(/\s+/).filter((w) => /^\p{L}/u.test(w)).map((w) => w[0]).slice(0, 2).join('').toLocaleUpperCase('tr-TR');
   return <span className="avatar ini">{initials}</span>;
 }
 
@@ -220,4 +220,9 @@ export function PasswordField({ value, onChange }: { value: string; onChange: (v
       <button type="button" className="ghost small" onClick={() => onChange(genPasswordLocal())}>Yeni üret</button>
     </div>
   );
+}
+
+/** Türk plakası görünümünde plaka */
+export function Plate({ plate, size }: { plate: string; size?: 'lg' }) {
+  return <span className={`plate ${size ?? ''}`} aria-label={`Plaka ${plate}`}><span className="tr">TR</span><span className="no">{plate}</span></span>;
 }

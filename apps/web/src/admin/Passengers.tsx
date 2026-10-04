@@ -4,7 +4,7 @@ import { formatPhone } from '@servis/shared';
 import { supabase } from '../lib/supabase';
 import { callFn, genPassword, normalizePhone, PERSON_COLUMNS, pgError, slugUsername, VEHICLE_COLUMNS, type PersonRow, type VehicleRow } from './common';
 import { StopMap, type MapStop, type PickedPoint } from './StopMap';
-import { CredentialsBox, Field, Notice, PasswordField } from './ui';
+import { CredentialsBox, Field, Notice, PasswordField, Plate } from './ui';
 
 type Ctx = { companyId: string; companyCode: string };
 type StopRow = { id: string; passenger_id: string; vehicle_id: string; lat: number; lng: number; address: string | null; pickup_order: number | null };
@@ -89,7 +89,7 @@ export function Passengers({ companyCode }: Ctx) {
       <div className="vtabs">
         {vehicles.map((v) => {
           const n = items.filter((i) => i.vehicle_id === v.id).length;
-          return <button key={v.id} className={v.id === vehicleId ? 'on' : ''} onClick={() => setVehicleId(v.id)}>{v.plate}{v.name ? ` · ${v.name}` : ''} <span className="count">{n}</span></button>;
+          return <button key={v.id} className={v.id === vehicleId ? 'on' : ''} onClick={() => setVehicleId(v.id)}><Plate plate={v.plate} />{v.name ?? ''} <span className="count">{n}</span></button>;
         })}
         {unassigned.length > 0 && <button className={vehicleId === '__none' ? 'on' : ''} onClick={() => setVehicleId('__none')}>Araçsız <span className="count">{unassigned.length}</span></button>}
       </div>
@@ -151,7 +151,7 @@ function PeopleTable({ list, onOpen }: { list: Item[]; onOpen: (i: Item) => void
       <table className="clickable">
         <thead><tr><th>Ad soyad</th><th>Kullanıcı adı</th><th>Telefon</th><th>Durak</th><th /></tr></thead>
         <tbody>{list.map((i) => (
-          <tr key={i.id} onClick={() => onOpen(i)}><td><b>{i.full_name}</b></td><td className="mono">{i.username}</td><td>{formatPhone(i.phone)}</td><td>{i.stop?.address ?? '—'}</td><td className="go">Aç →</td></tr>
+          <tr key={i.id} onClick={() => onOpen(i)}><td><b>{i.full_name}</b></td><td className="mono">{i.username}</td><td>{formatPhone(i.phone)}</td><td>{i.stop?.address ?? '—'}</td><td className="go">Aç</td></tr>
         ))}</tbody>
       </table>
     </div>

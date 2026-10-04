@@ -27,10 +27,7 @@ export function Platform({ activeCompanyId, onEnter }: { activeCompanyId: string
   return (
     <section>
       <div className="toolbar">
-        <div>
-          <h2>Şirketler {rows ? `(${rows.length})` : ''}</h2>
-          <p className="muted small">Her şirket ayrı bir projedir: kendi yöneticileri, araçları, sürücüleri ve yolcuları vardır; birbirlerinin verisini göremezler.</p>
-        </div>
+        <h2>{rows ? `${rows.length} şirket` : 'Şirketler'}</h2>
         <button onClick={() => setCreating(true)}>+ Yeni şirket aç</button>
       </div>
       {!rows ? <p className="muted">Yükleniyor…</p> : rows.length === 0 ? (
@@ -52,7 +49,7 @@ export function Platform({ activeCompanyId, onEnter }: { activeCompanyId: string
               </div>
               {(c.contact_name || c.contact_phone) && <div className="muted small">İletişim: {[c.contact_name, c.contact_phone].filter(Boolean).join(' · ')}</div>}
               <button className="small" disabled={busyId === c.id} onClick={() => enter(c.id)}>
-                {busyId === c.id ? 'Açılıyor…' : c.id === activeCompanyId ? 'Yönetime dön →' : 'Şirketi yönet →'}
+                {busyId === c.id ? 'Açılıyor…' : c.id === activeCompanyId ? 'Yönetime dön' : 'Şirketi yönet'}
               </button>
             </div>
           ))}
@@ -96,7 +93,7 @@ function CreateCompany({ onClose, onEnter }: { onClose: () => Promise<void>; onE
         <CredentialsBox title="Şirket yöneticisinin giriş bilgileri" companyCode={done.code} username={done.username} password={done.password} />
         <p className="muted small">Şimdi şirkete girip araçları, sürücüleri ve yolcuları ekleyebilirsiniz. Şirket yöneticisi de aynı işlemleri kendi hesabıyla yapabilir.</p>
         <div className="row-actions">
-          <button onClick={() => onEnter(done.id)}>Şirkete gir ve kuruluma başla →</button>
+          <button onClick={() => onEnter(done.id)}>Şirkete gir ve kuruluma başla</button>
           <button className="ghost" onClick={onClose}>Şirket listesine dön</button>
         </div>
       </section>
