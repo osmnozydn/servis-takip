@@ -4,7 +4,7 @@
 //   anlık yansır (daily_routes Realtime aboneliği).
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, StyleSheet, Text, View } from 'react-native';
+import { AppState, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../auth/AuthProvider';
 import { supabase } from '../lib/supabase';
 import { ago, duration, todayTR } from '../lib/time';
@@ -103,6 +103,9 @@ export function DriverHomeScreen() {
   async function stop() {
     setBusy(true);
     await stopTracking();
+    // Seferi sunucuda kapat: uğranmayan duraklar "uğranmadı" olarak işaretlenir.
+    // (Telefon kapanır/uygulama zorla kapatılırsa sunucu 30 dk sonra kendisi kapatır.)
+    await supabase.rpc('end_my_trip');
     setTracking(false);
     setBusy(false);
   }
@@ -120,7 +123,8 @@ export function DriverHomeScreen() {
     );
   }
 
-  const live = tracking && status?.lastSentAt && now - Date.parse(status.lastSentAt) < 120_000;
+  // Araç dururken (trafik, durak) telefon yeni konum üretmez; 5 dk'ya kadar "canlı" say.
+  const live = tracking && status?.lastSentAt && now - Date.parse(status.lastSentAt) < 300_000;
 
   return (
     <Screen>
@@ -153,12 +157,20 @@ export function DriverHomeScreen() {
         {perm === 'foreground_only' ? (
           <View style={styles.warn}>
             <Text style={styles.warnText}>
-              "Her zaman" konum izni verilmedi. Uygulama arka plandayken konum gönderilemeyebilir.
+              {Platform.OS === 'ios'
+                ? 'Konum izni "Uygulamayı Kullanırken" olarak verildi. Servis sırasında uygulama arka plandayken de konum gönderilir (üstte mavi konum simgesi görünür). Kesintisiz çalışma için Ayarlar > Servis Takip > Konum > "Her Zaman" seçin.'
+                : '"Her zaman" konum izni verilmedi. Uygulama arka plandayken konum gönderilemeyebilir.'}
             </Text>
             <Button title="Ayarları aç" variant="ghost" onPress={() => Linking.openSettings()} />
           </View>
         ) : null}
 
+        {tracking ? (
+          <Text style={[styles.meta, { marginTop: 10 }]}>
+            Uygulamayı arka plana alabilir, telefonu kilitleyebilirsiniz; konum gönderilmeye devam eder.
+            {Platform.OS === 'ios' ? ' Uygulamayı uygulama değiştiriciden yukarı kaydırarak KAPATMAYIN — iOS konum gönderimini durdurur.' : ''}
+          </Text>
+        ) : null}
         {tracking
           ? <Button title="Servisi bitir (yayını durdur)" variant="ghost" onPress={stop} loading={busy} />
           : <Button title="Servisi başlat" onPress={() => start(vehicleId)} loading={busy} />}

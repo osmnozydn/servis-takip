@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
   const metrics: Record<string, unknown> = {};
   let tempWindowId: string | null = null;
   let demoId: string | null = null;
+  const runStart = new Date(Date.now() - 5000).toISOString();
 
   try {
     const { data: demo } = await admin.from("companies").select("id").eq("code", "demo").single();
@@ -173,8 +174,9 @@ Deno.serve(async (req) => {
   } finally {
     if (tempWindowId) await admin.from("visibility_windows").delete().eq("id", tempWindowId);
     if (demoId) {
-      await admin.from("vehicle_positions").delete().eq("company_id", demoId);
+      await admin.from("vehicle_positions").delete().eq("company_id", demoId).gte("recorded_at", runStart);
       await admin.from("vehicle_last_positions").delete().eq("company_id", demoId);
+      await admin.from("trips").delete().eq("company_id", demoId).gte("started_at", runStart); // simülasyonun açtığı sefer
     }
   }
 

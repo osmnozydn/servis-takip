@@ -4,6 +4,7 @@ import {
   nextStep, ROLE_LABELS, signIn, validateNewPassword, type SessionProfile,
 } from '@servis/shared';
 import { isConfigured, supabase } from './lib/supabase';
+import { TripHistory } from './admin/TripHistory';
 
 const LAST_CODE_KEY = 'last_company_code';
 const storage = {
@@ -135,12 +136,13 @@ type Row = { id: string; full_name: string; username: string; role: keyof typeof
 
 function Home({ profile, onSignOut }: { profile: SessionProfile; onSignOut: () => void }) {
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [tab, setTab] = useState<'trips' | 'users'>('trips');
   useEffect(() => {
-    if (profile.role !== 'admin') return;
+    if (profile.role !== 'admin' || tab !== 'users') return;
     supabase.from('profiles').select('id, full_name, username, role, phone, vehicle:vehicles(plate)')
       .order('role').order('username')
       .then(({ data }) => setRows((data ?? []) as unknown as Row[]));
-  }, [profile.role]);
+  }, [profile.role, tab]);
 
   if (profile.role !== 'admin') {
     return (
@@ -157,6 +159,11 @@ function Home({ profile, onSignOut }: { profile: SessionProfile; onSignOut: () =
         <div><h1>{profile.company?.name}</h1><p className="muted">Şirket kodu: <b>{profile.company?.code}</b> · {profile.full_name}</p></div>
         <button className="ghost small" onClick={onSignOut}>Çıkış</button>
       </div>
+      <nav className="tabs">
+        <button className={tab === 'trips' ? 'on' : ''} onClick={() => setTab('trips')}>Sefer geçmişi</button>
+        <button className={tab === 'users' ? 'on' : ''} onClick={() => setTab('users')}>Kullanıcılar</button>
+      </nav>
+      {tab === 'trips' ? <TripHistory /> : <>
       <h2>Kullanıcılar {rows ? `(${rows.length})` : ''}</h2>
       {!rows ? <p className="muted">Yükleniyor…</p> : (
         <div className="tablewrap">
@@ -169,6 +176,7 @@ function Home({ profile, onSignOut }: { profile: SessionProfile; onSignOut: () =
         </div>
       )}
       <p className="muted small">Kullanıcı ekleme/düzenleme ekranları yönetim paneli aşamasında (Faz 7) eklenecek.</p>
+      </>}
     </Shell>
   );
 }

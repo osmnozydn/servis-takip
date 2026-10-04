@@ -78,6 +78,7 @@ KVKK metni `packages/shared/src/consent.ts` içinde **taslaktır**; canlıdan ö
 | `compute-route` | Bugünkü rotayı hesaplar (Google Routes; anahtar yoksa yedek algoritma). Sürücü servise başlayınca ve yolcu devamsızlık bildirince çalışır |
 | `dev-e2e` | **Geliştirme:** sanal kullanıcılarla uçtan uca test (47 test, sonuç `dev_test_runs` tablosuna) |
 | `dev-sim` | **Geliştirme:** canlı konum simülasyonu (16 test, gecikme ölçümü) |
+| `dev-trip` | **Geliştirme:** demo sefer verisi üretir (bir durağa uğranmayan sefer dahil) ve sefer geçmişini doğrular (15 test) |
 
 `dev-*` fonksiyonları veritabanındaki gizli anahtarla korunur ve canlıya çıkmadan önce silinecektir.
 Son test çıktıları: `supabase/tests/son_e2e_ciktisi.txt`, `supabase/tests/son_simulasyon_ciktisi.txt`.
@@ -110,6 +111,23 @@ kullanılır; tanımlı değilse en yakın komşu + 2-opt yedek algoritması ça
 (veritabanı tetikleyicisi → `compute-route`); geri alınca tekrar eklenir.
 
 **Harita:** şimdilik Leaflet + OpenStreetMap (anahtarsız). Canlıdan önce Google Maps'e geçilecek.
+
+## Sefer geçmişi (yalnızca yönetici)
+
+Her servis bir **sefer** olarak kaydedilir; sürücünün ilk konumuyla otomatik açılır, "Servisi bitir" ile
+veya 30 dk sinyal gelmezse kapanır. Sunucu her konumda durakları kontrol eder:
+
+| Alan | Anlamı |
+|---|---|
+| Varış | Araç durağa **80 m** yaklaştığı ilk an |
+| Ayrılış | Durağa vardıktan sonra **150 m** uzaklaştığı an |
+| Uğranmadı | Sefer bittiğinde hiç varılmamış durak |
+| En yakın geçiş | Uğranmayan durağa aracın en fazla ne kadar yaklaştığı ve saati (itiraz için kanıt) |
+| Gelmeyecekti | Yolcu o gün "kullanmayacağım" demiş |
+
+Web panelinde **Sefer geçmişi** sekmesi: tarih + araç → sefer → harita üzerinde gidilen yol, renkli duraklar,
+varış/ayrılış tablosu, CSV indirme. Sürücü ve yolcu sefer geçmişini ve 15 dakikadan eski konumları göremez.
+Saklama: konumlar 90 gün, sefer özetleri 1 yıl (pg_cron).
 
 ## Şema özeti (Faz 1)
 

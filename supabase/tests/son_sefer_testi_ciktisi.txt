@@ -1,0 +1,22 @@
+dev-trip — sefer geçmişi, gerçek Supabase projesi, 04.10.2026 ~15:10 İstanbul
+Sanal sürücüler gerçek oturumla konum gönderdi; 34 DMO 01 Üsküdar durağına bilerek uğramadı.
+Özet: 15/15 geçti
+
+✓ 34 DMO 01: 53 konum gönderildi, sefer bitirildi
+✓ 34 DMO 02: 88 konum gönderildi, sefer bitirildi
+✓ Yönetici 2 seferi görür
+✓ Sefer kapanış nedeni: sürücü
+✓ 34 DMO 01 mesafe ~10.3 km
+✓ Moda: varıldı (12:37, ayrılış 12:39)
+✓ Kozyatağı: varıldı (12:52, ayrılış 12:54)
+✓ Ataşehir: varıldı (12:59, ayrılış 13:02)
+✓ Üsküdar (Fatma Kaya): UĞRANMADI — araç en fazla 3.9 km yaklaştı
+✓ Varış saatleri gidiş sırasıyla tutarlı
+✓ Moda'da bekleme süresi ~2.5 dk
+✓ 34 DMO 02: 4 durağın hepsine varıldı
+✓ Yönetici seferin tüm güzergâhını görür
+✓ Sürücü sefer geçmişini ve eski güzergâhı göremez
+✓ Yolcu sefer geçmişini göremez
+
+Veritabanı testi (supabase/tests/trips.sql): 26/26 — geç gelen (çevrimdışı) konumla
+varış saatinin düzeltilmesi, 30 dk sinyal yokken otomatik kapanma, yetkiler dahil.

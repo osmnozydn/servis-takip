@@ -40,4 +40,30 @@ th { color: var(--muted); font-weight: 600; font-size: 13px; }
 .tag.admin { background: #E8EEF5; color: var(--primary); }
 .tag.driver { background: #FFF4D6; color: #7A5A00; }
 .tag.passenger { background: #E3F1E4; color: #2E7D32; }
+.card.wide { width: min(1100px, 100%); }
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); margin: 18px 0 16px; }
+.tabs button { margin: 0; background: none; color: var(--muted); border-radius: 0; padding: 10px 14px; border-bottom: 3px solid transparent; font-weight: 600; }
+.tabs button.on { color: var(--primary); border-bottom-color: var(--accent); }
+.filters { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.filters label { margin-bottom: 6px; min-width: 170px; }
+select { font: inherit; font-weight: 400; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.empty { background: #F7F9FC; border: 1px dashed var(--border); border-radius: 10px; padding: 24px; text-align: center; color: var(--muted); }
+table.clickable tbody tr { cursor: pointer; }
+table.clickable tbody tr:hover { background: #F5F8FC; }
+td.go { color: var(--primary); font-weight: 600; text-align: right; }
+.tag.arrived { background: #E3F1E4; color: #2E7D32; }
+.tag.missed { background: #FDECEC; color: var(--danger); margin-left: 6px; }
+td .tag.missed { margin-left: 0; }
+.tag.absent { background: #EEF1F5; color: #5B6573; }
+.tag.pending, .tag.live { background: #FFF4D6; color: #7A5A00; }
+.tag.live { margin: 0; }
+.row-missed td { background: #FFF7F7; }
+.trip-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.back { margin: 0; }
+.alert { background: #FDECEC; color: var(--danger); border-radius: 8px; padding: 10px 14px; margin: 0 0 12px; }
+.tripmap { height: 420px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #E8EEF5; }
+.tripmap.loading { display: grid; place-items: center; color: var(--muted); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 8px 0 14px; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 6px; margin-right: 6px; vertical-align: -1px; }
+.legend i.line { width: 20px; height: 4px; border-radius: 2px; background: var(--primary); vertical-align: 2px; }
 @media (max-width: 480px) { .card { padding: 22px 16px; } }

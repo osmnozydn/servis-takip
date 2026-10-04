@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
 });
 
 async function runTests(admin: SupabaseClient) {
+  const runStart = new Date(Date.now() - 5000).toISOString();
   const results: Result[] = [];
   const t = (test: string, cond: boolean, detail?: unknown) =>
     results.push({ test, ok: !!cond, ...(cond ? {} : { detail: JSON.stringify(detail) }) });
@@ -251,8 +252,9 @@ async function runTests(admin: SupabaseClient) {
     // Temizlik: test konumları ve (kaldıysa) test kullanıcısı
     const { data: demo } = await admin.from("companies").select("id").eq("code", "demo").maybeSingle();
     if (demo) {
-      await admin.from("vehicle_positions").delete().eq("company_id", demo.id);
+      await admin.from("vehicle_positions").delete().eq("company_id", demo.id).gte("recorded_at", runStart);
       await admin.from("vehicle_last_positions").delete().eq("company_id", demo.id);
+      await admin.from("trips").delete().eq("company_id", demo.id).gte("started_at", runStart); // testin açtığı seferler
     }
     if (e2eUserId) await admin.auth.admin.deleteUser(e2eUserId);
   }

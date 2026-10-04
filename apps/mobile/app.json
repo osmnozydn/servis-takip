@@ -8,7 +8,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.servistakip.app"
+      "bundleIdentifier": "com.servistakip.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,7 +28,12 @@
     },
     "scheme": "servistakip",
     "plugins": [
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": false
+        }
+      ],
       [
         "expo-location",
         {
@@ -33,7 +41,9 @@
           "locationWhenInUsePermission": "Servis aracının konumunu yolculara iletebilmek için konumunuza erişmemiz gerekir.",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
+          "isAndroidForegroundServiceEnabled": true,
+          "locationAlwaysPermission": "Servis süresince, uygulama arka plandayken de aracın konumunu yolculara iletebilmek için konumunuza erişmemiz gerekir.",
+          "motionUsagePermission": false
         }
       ]
     ]
