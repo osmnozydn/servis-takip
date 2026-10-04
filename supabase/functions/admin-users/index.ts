@@ -1,11 +1,13 @@
 // admin-users — Şirket yöneticisinin kullanıcı yönetimi
 //
 // POST /functions/v1/admin-users   (Authorization: Bearer <kullanıcı oturum token'ı>)
-//   { action: "create", role, username, full_name, password, phone?, vehicle_id? }
+//   { action: "create", role, username, full_name, password, phone?, vehicle_id?,
+//     license_no?, license_class?, license_expires_on?,   (sürücü)
+//     stop?: { lat, lng, address? } }                     (yolcu: durağı da oluşturur)
 //   { action: "reset_password", user_id, password }
-//   { action: "delete", user_id }
+//   { action: "delete", user_id }   (sürücünün belgeleri ve dosyaları da silinir)
 //
-// Çağıran kişi giriş yapmış bir ADMIN olmalı. İşlemler her zaman çağıranın
+// Çağıran kişi giriş yapmış bir ADMIN veya bir şirkete girmiş PLATFORM YÖNETİCİSİ olmalı. İşlemler her zaman çağıranın
 // kendi şirketinde yapılır; istek gövdesinde şirket bilgisi kabul edilmez.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -38,10 +40,9 @@ async function callerAdmin(admin: SupabaseClient, req: Request) {
   if (!token) return null;
   const { data, error } = await admin.auth.getUser(token);
   if (error || !data.user) return null;
-  const { data: prof } = await admin
-    .from("profiles").select("id, company_id, role").eq("id", data.user.id).maybeSingle();
-  if (!prof || prof.role !== "admin") return null;
-  return prof as { id: string; company_id: string; role: string };
+  const { data: companyId } = await admin.rpc("admin_company_of", { p_uid: data.user.id });
+  if (!companyId) return null;
+  return { id: data.user.id, company_id: companyId as string };
 }
 
 async function targetInCompany(admin: SupabaseClient, userId: unknown, companyId: string) {
@@ -72,6 +73,10 @@ Deno.serve(async (req) => {
       const fullName = String(body.full_name ?? "").trim();
       const phone = body.phone ? String(body.phone) : null;
       const vehicleId = body.vehicle_id ? String(body.vehicle_id) : null;
+      const opt = (k: string) => (body[k] ? String(body[k]).trim() : null);
+      const stop = body.stop as { lat?: number; lng?: number; address?: string } | undefined;
+      if (stop && (typeof stop.lat !== "number" || typeof stop.lng !== "number")) return json(400, { error: "Durak konumu geçersiz" });
+      if (role === "passenger" && stop && !vehicleId) return json(400, { error: "Durak için önce servis aracı seçin." });
 
       if (!ROLES.includes(role as typeof ROLES[number])) return json(400, { error: "Geçersiz rol" });
       if (!USERNAME_RE.test(username)) return json(400, { error: "Kullanıcı adı 3-32 karakter; küçük harf, rakam, . _ - içerebilir." });
@@ -92,6 +97,9 @@ Deno.serve(async (req) => {
       const { error: pErr } = await admin.from("profiles").insert({
         id: created.user.id, company_id: me.company_id, role, username,
         full_name: fullName, phone, vehicle_id: vehicleId, must_change_password: true,
+        ...(role === "driver" ? {
+          license_no: opt("license_no"), license_class: opt("license_class"), license_expires_on: opt("license_expires_on"),
+        } : {}),
       });
       if (pErr) {
         await admin.auth.admin.deleteUser(created.user.id);
@@ -99,6 +107,16 @@ Deno.serve(async (req) => {
           : pErr.code === "23503" ? "Seçilen araç şirketinize ait değil."
           : "Profil oluşturulamadı";
         return json(400, { error: msg, detail: pErr.message });
+      }
+      if (role === "passenger" && stop) {
+        const { error: sErr } = await admin.from("stops").insert({
+          company_id: me.company_id, passenger_id: created.user.id, vehicle_id: vehicleId,
+          lat: stop.lat, lng: stop.lng, address: stop.address ?? null,
+        });
+        if (sErr) {
+          await admin.auth.admin.deleteUser(created.user.id);
+          return json(400, { error: "Durak kaydedilemedi", detail: sErr.message });
+        }
       }
       return json(201, { id: created.user.id, username });
     }
@@ -117,6 +135,12 @@ Deno.serve(async (req) => {
       const t = await targetInCompany(admin, body.user_id, me.company_id);
       if (!t) return json(404, { error: "Kullanıcı bulunamadı" });
       if (t.id === me.id) return json(400, { error: "Kendi hesabınızı silemezsiniz." });
+      const { data: docs } = await admin.from("documents").select("id, file_path")
+        .eq("company_id", me.company_id).eq("owner_type", "driver").eq("owner_id", t.id);
+      if (docs?.length) {
+        await admin.storage.from("documents").remove(docs.map((d) => d.file_path));
+        await admin.from("documents").delete().in("id", docs.map((d) => d.id));
+      }
       const { error } = await admin.auth.admin.deleteUser(t.id);
       if (error) return json(500, { error: "Kullanıcı silinemedi", detail: error.message });
       return json(200, { ok: true });

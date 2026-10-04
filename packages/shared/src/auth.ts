@@ -16,9 +16,15 @@ export interface SessionProfile {
   phone: string | null;
   must_change_password: boolean;
   consent_version: string | null;
-  company: { name: string; code: string } | null;
-  vehicle: { plate: string; name: string | null } | null;
+  /** Platform yöneticisi: şirket açar, istediği şirkete girip yönetici gibi çalışır */
+  is_platform_admin: boolean;
+  /** Platform yöneticisi için: o an girdiği şirket (yoksa null) */
+  company: { id: string; name: string; code: string } | null;
+  vehicle: { id: string; plate: string; name: string | null } | null;
 }
+
+/** Platform yöneticilerinin giriş ekranında yazdığı şirket kodu */
+export const PLATFORM_CODE = 'platform';
 
 /** Bir sonraki ekran */
 export type AuthStep = 'login' | 'change_password' | 'consent' | 'home';
@@ -26,7 +32,7 @@ export type AuthStep = 'login' | 'change_password' | 'consent' | 'home';
 export function nextStep(profile: SessionProfile | null): AuthStep {
   if (!profile) return 'login';
   if (profile.must_change_password) return 'change_password';
-  if (profile.consent_version !== CONSENT_VERSION) return 'consent';
+  if (!profile.is_platform_admin && profile.consent_version !== CONSENT_VERSION) return 'consent';
   return 'home';
 }
 
@@ -59,11 +65,7 @@ export async function signIn(
 export async function loadProfile(supabase: SupabaseClient): Promise<SessionProfile | null> {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, role, username, full_name, phone, must_change_password, consent_version, company:companies(name, code), vehicle:vehicles(plate, name)')
-    .eq('id', auth.user.id)
-    .single();
+  const { data, error } = await supabase.rpc('my_session');
   if (error || !data) return null;
   return data as unknown as SessionProfile;
 }
@@ -81,7 +83,8 @@ export async function changePassword(supabase: SupabaseClient, userId: string, n
     const same = /different from the old/i.test(error.message);
     return { ok: false as const, message: same ? 'Yeni şifre eskisinden farklı olmalı.' : 'Şifre değiştirilemedi. Tekrar deneyin.' };
   }
-  await supabase.from('profiles').update({ must_change_password: false }).eq('id', userId);
+  void userId;
+  await supabase.rpc('mark_password_changed');
   return { ok: true as const };
 }
 

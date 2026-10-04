@@ -115,6 +115,19 @@ Deno.serve(async (req) => {
   const { data: ok } = await admin.rpc("dev_verify_secret", { p_secret: req.headers.get("x-dev-secret") ?? "" });
   if (ok !== true) return json(403, { error: "forbidden" });
 
+  const body = await req.json().catch(() => ({})) as { action?: string; username?: string; password?: string };
+
+  // Platform yöneticisi için giriş hesabı (auth kullanıcısı) — platform_admins satırı SQL ile eklenir
+  if (body.action === "platform_admin_user") {
+    if (!body.password || body.password.length < 8) return json(400, { error: "şifre gerekli" });
+    const email = `u-${crypto.randomUUID().replaceAll("-", "")}@servis.local`;
+    const { data, error } = await admin.auth.admin.createUser({
+      email, password: body.password, email_confirm: true, app_metadata: { role: "platform_admin" },
+    });
+    if (error || !data.user) return json(500, { error: error?.message });
+    return json(201, { ok: true, user_id: data.user.id });
+  }
+
   try {
     await wipeCompany(admin, DEMO.code);
     await wipeCompany(admin, DEMO_B.code);

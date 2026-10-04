@@ -3,7 +3,7 @@
 Şirket bazlı servis aracı takip sistemi: sürücü canlı konum yayınlar, yolcu yetkili saatlerde aracı haritada görür, rota durak sırasına göre otomatik hesaplanır.
 
 ```
-apps/web        React + Vite (yönetim paneli, Faz 7)
+apps/web        React + Vite (yönetim paneli)
 apps/mobile     Expo SDK 57 (sürücü + yolcu uygulaması)
 packages/shared Ortak tipler ve sabitler
 supabase/       Migration'lar ve RLS testleri
@@ -35,7 +35,7 @@ Testler tek transaction içinde çalışır ve sonunda ROLLBACK eder; veritaban�
 DB_URL="postgresql://postgres:...@...:5432/postgres" npm run db:test
 ```
 
-Beklenen çıktı: `62 testin tamamı geçti`. Giriş testleri: `supabase/tests/login.sql` (16 test).
+Test dosyaları: `rls_isolation.sql` (62), `login.sql` (16), `live_location.sql` (9), `routes.sql` (10), `trips.sql` (26), `admin_panel.sql` (36).
 
 Supabase olmadan, düz Postgres'te denemek için önce `supabase/tests/support/supabase_shim.sql`, ardından migration'ı çalıştırın (bu shim'i gerçek projede çalıştırmayın).
 
@@ -73,11 +73,13 @@ KVKK metni `packages/shared/src/consent.ts` içinde **taslaktır**; canlıdan ö
 
 | Fonksiyon | Amaç |
 |---|---|
-| `admin-users` | Yönetici: kullanıcı oluşturma, şifre sıfırlama, silme (yalnızca kendi şirketinde) |
+| `admin-users` | Yönetici: kullanıcı oluşturma (sürücüde ehliyet bilgisi, yolcuda durak), şifre sıfırlama, silme (sürücünün belgeleriyle) — yalnızca kendi şirketinde |
+| `platform-admin` | Platform yöneticisi: yeni şirket + ilk şirket yöneticisini açma, şirket bilgisi güncelleme |
 | `dev-seed` | **Geliştirme:** demo şirketlerini ve sanal kullanıcıları yeniden kurar |
 | `compute-route` | Bugünkü rotayı hesaplar (Google Routes; anahtar yoksa yedek algoritma). Sürücü servise başlayınca ve yolcu devamsızlık bildirince çalışır |
 | `dev-e2e` | **Geliştirme:** sanal kullanıcılarla uçtan uca test (47 test, sonuç `dev_test_runs` tablosuna) |
 | `dev-sim` | **Geliştirme:** canlı konum simülasyonu (16 test, gecikme ölçümü) |
+| `dev-admin` | **Geliştirme:** yönetim paneli uçtan uca testi — şirket açma, belge erişimi, alış sırası (37 test) |
 | `dev-trip` | **Geliştirme:** demo sefer verisi üretir (bir durağa uğranmayan sefer dahil) ve sefer geçmişini doğrular (15 test) |
 
 `dev-*` fonksiyonları veritabanındaki gizli anahtarla korunur ve canlıya çıkmadan önce silinecektir.
@@ -128,6 +130,31 @@ veya 30 dk sinyal gelmezse kapanır. Sunucu her konumda durakları kontrol eder:
 Web panelinde **Sefer geçmişi** sekmesi: tarih + araç → sefer → harita üzerinde gidilen yol, renkli duraklar,
 varış/ayrılış tablosu, CSV indirme. Sürücü ve yolcu sefer geçmişini ve 15 dakikadan eski konumları göremez.
 Saklama: konumlar 90 gün, sefer özetleri 1 yıl (pg_cron).
+
+## Yönetim paneli
+
+**Platform yöneticisi** (şirket kodu `platform`): tüm şirketleri görür, **yeni şirket açar** (şirket adı, giriş kodu,
+yetkili, ilk şirket yöneticisi ve geçici şifresi), bir şirkete “girip” o şirketin yöneticisi gibi çalışır.
+Şirkete girmeden hiçbir şirketin verisini göremez; girdiği şirket dışındakini de göremez.
+
+Şirket içi sekmeler:
+
+| Sekme | İçerik |
+|---|---|
+| Yolcular ve duraklar | Araç seçilir → yolcular **alış sırasıyla** listelenir, oklarla sıra değiştirilip kaydedilir; haritada numaralı duraklar ve varış noktası. Yeni yolcu: ad, telefon, otomatik kullanıcı adı + geçici şifre, durak adres aramasıyla veya haritaya tıklayarak |
+| Sürücüler | Yeni sürücü kaydı: kişisel bilgiler, giriş bilgileri, araç (mevcut veya yeni), ehliyet; **kayıt sırasında** sürücü fotoğrafı, ehliyet, SRC, psikoteknik, adli sicil ve araç fotoğrafı/ruhsat/sigorta/muayene yükleme (son geçerlilik tarihleriyle). Süresi 30 günden az kalan belgeler uyarı olarak görünür |
+| Araçlar | Plaka, hat adı, marka/model, renk, kapasite; rota modu (otomatik en kısa / belirlenen alış sırası); varış noktası (fabrika/okul); yolcuların konumu görebileceği gün ve saatler; belgeler |
+| Sefer geçmişi | Önceki bölüm |
+| Yöneticiler | Şirket yöneticileri: ekle, şifre sıfırla, sil |
+
+**Belgeler** Storage'da özel `documents` kovasında `{şirket}/{driver|vehicle}/{sahip}/{dosya}` yolunda tutulur
+(JPG/PNG/WEBP/HEIC/PDF, en fazla 10 MB). Yönetici tüm belgeleri görür; sürücü ve yolcu yalnızca kendi servisinin
+**sürücü fotoğrafını ve araç fotoğrafını** görebilir. Ehliyet, sabıka kaydı vb. yalnızca yöneticiye açıktır.
+Başka şirketin klasörüne yükleme/okuma yapılamaz (RLS + Storage politikaları).
+
+**Alış sırası:** her durağın `pickup_order` değeri vardır; yeni yolcu aracın sonuna eklenir, araç değiştiren yolcu
+yeni aracın sonuna taşınır. Aracın rota modu `manual` ise `compute-route` durakları bu sırayla gezer (yalnızca süre
+hesaplanır); `auto` ise en kısa sıra hesaplanır.
 
 ## Şema özeti (Faz 1)
 

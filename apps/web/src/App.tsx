@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
-  acceptConsent, changePassword, consentCheckboxLabel, consentSections, formatPhone, loadProfile, MIN_PASSWORD_LENGTH,
+  acceptConsent, changePassword, consentCheckboxLabel, consentSections, loadProfile, MIN_PASSWORD_LENGTH,
   nextStep, ROLE_LABELS, signIn, validateNewPassword, type SessionProfile,
 } from '@servis/shared';
 import { isConfigured, supabase } from './lib/supabase';
 import { TripHistory } from './admin/TripHistory';
+import { Platform } from './admin/Platform';
+import { Vehicles } from './admin/Vehicles';
+import { Drivers } from './admin/Drivers';
+import { Passengers } from './admin/Passengers';
+import { Admins } from './admin/Admins';
 
 const LAST_CODE_KEY = 'last_company_code';
 const storage = {
@@ -36,7 +41,7 @@ export default function App() {
     case 'login': return <Login onDone={refresh} />;
     case 'change_password': return <ChangePassword profile={profile!} onDone={refresh} onSignOut={signOut} />;
     case 'consent': return <Consent profile={profile!} onDone={refresh} onSignOut={signOut} />;
-    default: return <Home profile={profile!} onSignOut={signOut} />;
+    default: return <Home profile={profile!} onSignOut={signOut} onRefresh={refresh} />;
   }
 }
 
@@ -71,7 +76,8 @@ function Login({ onDone }: { onDone: () => Promise<void> }) {
       <p className="muted">Yönetim paneli</p>
       <form onSubmit={submit}>
         {error && <p className="err box">{error}</p>}
-        <label>Şirket kodu<input value={code} onChange={(e) => setCode(e.target.value)} placeholder="örn. demo" autoCapitalize="none" /></label>
+        <label>Şirket kodu<input value={code} onChange={(e) => setCode(e.target.value)} placeholder="örn. demo" autoCapitalize="none" />
+          <small className="muted hint">Platform yöneticisi iseniz: <b>platform</b></small></label>
         <label>Kullanıcı adı veya telefon<input value={ident} onChange={(e) => setIdent(e.target.value)} placeholder="örn. yonetici" autoCapitalize="none" /></label>
         <label>Şifre<input type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></label>
         <button disabled={busy}>{busy ? 'Giriş yapılıyor…' : 'Giriş yap'}</button>
@@ -132,17 +138,24 @@ function Consent({ profile, onDone, onSignOut }: { profile: SessionProfile; onDo
   );
 }
 
-type Row = { id: string; full_name: string; username: string; role: keyof typeof ROLE_LABELS; phone: string | null; vehicle: { plate: string } | null };
+type Tab = 'trips' | 'vehicles' | 'drivers' | 'passengers' | 'admins' | 'platform';
+const TABS: { id: Exclude<Tab, 'platform'>; label: string }[] = [
+  { id: 'passengers', label: 'Yolcular ve duraklar' },
+  { id: 'drivers', label: 'Sürücüler' },
+  { id: 'vehicles', label: 'Araçlar' },
+  { id: 'trips', label: 'Sefer geçmişi' },
+  { id: 'admins', label: 'Yöneticiler' },
+];
 
-function Home({ profile, onSignOut }: { profile: SessionProfile; onSignOut: () => void }) {
-  const [rows, setRows] = useState<Row[] | null>(null);
-  const [tab, setTab] = useState<'trips' | 'users'>('trips');
-  useEffect(() => {
-    if (profile.role !== 'admin' || tab !== 'users') return;
-    supabase.from('profiles').select('id, full_name, username, role, phone, vehicle:vehicles(plate)')
-      .order('role').order('username')
-      .then(({ data }) => setRows((data ?? []) as unknown as Row[]));
-  }, [profile.role, tab]);
+function Home({ profile, onSignOut, onRefresh }: { profile: SessionProfile; onSignOut: () => void; onRefresh: () => Promise<void> }) {
+  const company = profile.company;
+  const [tab, setTab] = useState<Tab>(profile.is_platform_admin && !company ? 'platform' : 'passengers');
+
+  async function enterCompany(id: string | null) {
+    await supabase.rpc('platform_enter_company', { p_company: id });
+    await onRefresh();
+    setTab(id ? 'passengers' : 'platform');
+  }
 
   if (profile.role !== 'admin') {
     return (
@@ -153,30 +166,34 @@ function Home({ profile, onSignOut }: { profile: SessionProfile; onSignOut: () =
       </Shell>
     );
   }
+
+  const showPlatform = profile.is_platform_admin && (tab === 'platform' || !company);
   return (
     <Shell wide>
       <div className="head">
-        <div><h1>{profile.company?.name}</h1><p className="muted">Şirket kodu: <b>{profile.company?.code}</b> · {profile.full_name}</p></div>
+        <div>
+          {profile.is_platform_admin && <div className="platformbar">Platform yöneticisi{company && <> · <button className="link" onClick={() => setTab('platform')}>Tüm şirketler</button></>}</div>}
+          <h1>{showPlatform ? 'Şirketler' : company?.name}</h1>
+          <p className="muted">{showPlatform ? profile.full_name : <>Şirket kodu: <b>{company?.code}</b> · {profile.full_name}</>}</p>
+        </div>
         <button className="ghost small" onClick={onSignOut}>Çıkış</button>
       </div>
-      <nav className="tabs">
-        <button className={tab === 'trips' ? 'on' : ''} onClick={() => setTab('trips')}>Sefer geçmişi</button>
-        <button className={tab === 'users' ? 'on' : ''} onClick={() => setTab('users')}>Kullanıcılar</button>
-      </nav>
-      {tab === 'trips' ? <TripHistory /> : <>
-      <h2>Kullanıcılar {rows ? `(${rows.length})` : ''}</h2>
-      {!rows ? <p className="muted">Yükleniyor…</p> : (
-        <div className="tablewrap">
-          <table>
-            <thead><tr><th>Ad soyad</th><th>Kullanıcı adı</th><th>Rol</th><th>Telefon</th><th>Araç</th></tr></thead>
-            <tbody>{rows.map((r) => (
-              <tr key={r.id}><td>{r.full_name}</td><td>{r.username}</td><td><span className={`tag ${r.role}`}>{ROLE_LABELS[r.role]}</span></td><td>{formatPhone(r.phone)}</td><td>{r.vehicle?.plate ?? '—'}</td></tr>
-            ))}</tbody>
-          </table>
-        </div>
+      {showPlatform ? (
+        <Platform activeCompanyId={company?.id ?? null} onEnter={enterCompany} />
+      ) : company && (
+        <>
+          <nav className="tabs">
+            {TABS.map((t) => <button key={t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>)}
+          </nav>
+          <div key={company.id}>
+            {tab === 'trips' && <TripHistory />}
+            {tab === 'vehicles' && <Vehicles companyId={company.id} />}
+            {tab === 'drivers' && <Drivers companyId={company.id} companyCode={company.code} />}
+            {tab === 'passengers' && <Passengers companyId={company.id} companyCode={company.code} />}
+            {tab === 'admins' && <Admins companyCode={company.code} myId={profile.id} />}
+          </div>
+        </>
       )}
-      <p className="muted small">Kullanıcı ekleme/düzenleme ekranları yönetim paneli aşamasında (Faz 7) eklenecek.</p>
-      </>}
     </Shell>
   );
 }

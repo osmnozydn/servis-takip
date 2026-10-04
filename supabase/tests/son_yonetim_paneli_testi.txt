@@ -1,0 +1,42 @@
+Yönetim paneli uçtan uca testi (dev-admin) — gerçek Supabase projesi, 2026-10-04
+Sonuç: 37/37 test geçti
+
+1. Platform yöneticisi 'platform' koduyla giriş yapar  GEÇTİ
+2. Oturum: platform yöneticisi, aktif şirket yok  GEÇTİ
+3. Tüm şirketleri listeler (demo dahil)  GEÇTİ
+4. Şirkete girmeden hiçbir aracı göremez  GEÇTİ
+5. Şirket yöneticisi şirket AÇAMAZ (403)  GEÇTİ
+6. 'platform' şirket kodu reddedilir  GEÇTİ
+7. Platform yöneticisi şirket açar (yönetici hesabıyla)  GEÇTİ
+8. Aynı şirket kodu ikinci kez alınamaz (409)  GEÇTİ
+9. Yeni şirketin yöneticisi giriş yapar; ilk girişte şifre değiştirmesi istenir  GEÇTİ
+10. Platform yöneticisi şirkete girer  GEÇTİ
+11. Şirketin içinde araç ekler  GEÇTİ
+12. Girdiği şirket dışındaki araçları GÖRMEZ  GEÇTİ
+13. Platform yöneticisi sürücü ekler (ehliyet bilgileriyle)  GEÇTİ
+14. Ehliyet bilgileri ve araç kaydedildi  GEÇTİ
+15. Yönetici fotoğraf ve PDF'leri yükler  GEÇTİ
+16. Belge kayıtları oluşturulur  GEÇTİ
+17. İzin verilmeyen dosya türü yüklenemez  GEÇTİ
+18. Başka şirketin klasörüne dosya yükleyemez  GEÇTİ
+19. Yönetici 3 yolcuyu durağıyla ekler  GEÇTİ
+20. Duraklar eklenme sırasıyla 1-2-3 alış sırası alır  GEÇTİ
+21. Araç seçilmeden duraklı yolcu eklenemez  GEÇTİ
+22. Yolcu yalnızca sürücü fotoğrafını ve araç fotoğrafını görür  GEÇTİ
+23. Yolcu sürücü fotoğrafını indirebilir  GEÇTİ
+24. Yolcu ehliyet PDF'ini İNDİREMEZ  GEÇTİ
+25. Yolcu dosya yükleyemez  GEÇTİ
+26. Sürücü kendi fotoğrafını ve aracının fotoğrafını görür, ehliyet/sigortayı görmez  GEÇTİ
+27. Başka şirketin yöneticisi belgeleri GÖREMEZ  GEÇTİ
+28. Başka şirketin yöneticisi dosyayı İNDİREMEZ  GEÇTİ
+29. Yönetici belge için süreli bağlantı alır  GEÇTİ
+30. Yönetici alış sırasını değiştirir (3 → 1 → 2)  GEÇTİ
+31. Yolcu alış sırasını DEĞİŞTİREMEZ  GEÇTİ
+32. Manuel modda rota belirlenen alış sırasıyla oluşur  GEÇTİ
+33. Otomatik modda rota yeniden hesaplanır (platform yöneticisi de çağırabilir)  GEÇTİ
+34. Başka şirketin yöneticisi bu aracın rotasını hesaplatamaz  GEÇTİ
+35. Sürücü silinir  GEÇTİ
+36. Sürücünün belgeleri ve dosyaları da silinir  GEÇTİ
+37. Platform yöneticisi şirketten çıkar  GEÇTİ
+
+Ayrıca: yerel SQL testleri 159/159 (admin_panel.sql 36 yeni), önceki uçtan uca test (dev-e2e) 47/47.
