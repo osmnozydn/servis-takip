@@ -165,7 +165,7 @@ function VehicleForm({ companyId, vehicle, onClose }: { companyId: string; vehic
         <h3 className="span2">Rota</h3>
         <div className="span2 radios">
           <label className="radio"><input type="radio" checked={mode === 'auto'} onChange={() => setMode('auto')} />
-            <span><b>Otomatik (en kısa yol)</b><br /><small className="muted">Sürücü servisi başlatınca duraklar trafiğe göre en kısa sırayla dizilir.</small></span></label>
+            <span><b>Otomatik (en hızlı yol)</b><br /><small className="muted">Sürücü servisi başlatınca duraklar yollara göre en hızlı sırayla dizilir.</small></span></label>
           <label className="radio"><input type="radio" checked={mode === 'manual'} onChange={() => setMode('manual')} />
             <span><b>Benim belirlediğim alış sırası</b><br /><small className="muted">Yolcular “Yolcular” sekmesinde belirlediğiniz sırayla alınır.</small></span></label>
         </div>

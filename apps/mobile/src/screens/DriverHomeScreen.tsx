@@ -18,7 +18,7 @@ import { VehicleCard } from '../ui/VehicleCard';
 import { colors } from '../ui/theme';
 
 type RouteStop = { passenger_id: string; lat: number; lng: number; address: string | null; eta_s: number };
-type DailyRoute = { stops: RouteStop[]; distance_m: number | null; duration_s: number | null; source: string; computed_at: string };
+type DailyRoute = { stops: RouteStop[]; polyline: string | null; distance_m: number | null; duration_s: number | null; source: string; computed_at: string };
 
 export function DriverHomeScreen() {
   const { profile, signOut } = useAuth();
@@ -39,7 +39,7 @@ export function DriverHomeScreen() {
 
   const loadRoute = useCallback(async (vid: string) => {
     const { data } = await supabase.from('daily_routes')
-      .select('stops, distance_m, duration_s, source, computed_at')
+      .select('stops, polyline, distance_m, duration_s, source, computed_at')
       .eq('vehicle_id', vid).eq('service_date', todayTR()).maybeSingle();
     setRoute((data as DailyRoute) ?? null);
   }, []);
@@ -185,7 +185,7 @@ export function DriverHomeScreen() {
         </View>
         {route && route.stops.length > 0 ? (
           <>
-            <LiveMap stops={route.stops} height={220} />
+            <LiveMap stops={route.stops} path={route.polyline} height={220} />
             {route.stops.map((s, i) => (
               <View key={s.passenger_id} style={styles.stopRow}>
                 <View style={styles.badge}><Text style={styles.badgeText}>{i + 1}</Text></View>

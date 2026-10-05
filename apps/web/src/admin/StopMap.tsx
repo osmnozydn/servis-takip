@@ -28,13 +28,15 @@ async function reverse(lat: number, lng: number): Promise<string> {
 }
 const shortAddress = (s: string) => s.split(', ').filter((p) => !/^(Türkiye|\d{5})$/.test(p)).slice(0, 4).join(', ');
 
-export function StopMap({ stops = [], picked, onPick, end, height = 380, focus }: {
+export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, path }: {
   stops?: MapStop[];
   picked?: PickedPoint | null;
   onPick?: (p: PickedPoint) => void;
   end?: { lat: number; lng: number; label: string } | null;
   height?: number;
   focus?: string | null;
+  /** Yollardan geçen güzergâh (enlem, boylam). Yoksa duraklar arası kesikli tahmini çizgi. */
+  path?: [number, number][] | null;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -76,12 +78,17 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus }
       L.marker([end.lat, end.lng], { icon: pin('★', '#F2A900', 28) }).bindTooltip(`Varış: ${end.label}`).addTo(g);
       pts.push([end.lat, end.lng]);
     }
-    if (stops.length > 1) L.polyline(stops.map((s) => [s.lat, s.lng] as L.LatLngTuple), { color: '#1F4E79', weight: 2, dashArray: '6 6', opacity: .6 }).addTo(g);
+    if (path && path.length > 1) {
+      L.polyline(path, { color: '#ffffff', weight: 8, opacity: .9, interactive: false }).addTo(g);
+      L.polyline(path, { color: '#1F4E79', weight: 5, opacity: .95, interactive: false }).addTo(g);
+    } else if (stops.length > 1) {
+      L.polyline(stops.map((s) => [s.lat, s.lng] as L.LatLngTuple), { color: '#1F4E79', weight: 2, dashArray: '4 8', opacity: .35, interactive: false }).addTo(g);
+    }
     if (picked) pts.push([picked.lat, picked.lng]);
     // Durak kümesi değiştiğinde (ilk yükleme, durak eklendi/çıkarıldı) yeniden sığdır; yalnızca sıra değişince haritayı oynatma
     const setKey = stops.map((s) => s.id).sort().join(',') + (end ? '|end' : '');
     if (pts.length && fitted.current !== setKey) { m.fitBounds(L.latLngBounds(pts), { padding: [30, 30], maxZoom: 15, animate: false }); fitted.current = setKey; }
-  }, [stops, end]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stops, end, path]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Seçilen nokta
   useEffect(() => {

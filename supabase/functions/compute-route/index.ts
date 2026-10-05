@@ -1,22 +1,19 @@
-// compute-route — Aracın bugünkü rotasını hesaplar ve daily_routes'a yazar.
+// compute-route — Aracın bugünkü rotasını yol ağı üzerinden hesaplar ve daily_routes'a yazar.
 //
 // POST { vehicle_id, origin?: { lat, lng } }
-// Yetki: (a) aracın sürücüsü veya şirketin yöneticisi (Authorization: Bearer <oturum>)
+// Yetki: (a) aracın sürücüsü veya şirketin yöneticisi / şirkete girmiş platform yöneticisi
 //        (b) veritabanı tetikleyicisi (x-internal-secret)
 //
-// Rota: başlangıç = verilen konum → aracın son görülen konumu → ilk durak.
-//       bitiş     = aracın bitiş noktası (fabrika/okul) varsa o; yoksa başlangıca en uzak durak.
-//       Ara duraklar Google Routes API ile (optimizeWaypointOrder) sıralanır.
-//       GOOGLE_MAPS_API_KEY tanımlı değilse veya Google hata verirse yedek algoritma
-//       (en yakın komşu + 2-opt, kuş uçuşu mesafe) kullanılır.
-// Aracın rota modu "manual" ise duraklar yöneticinin belirlediği alış sırasıyla (stops.pickup_order)
-// gezilir; yalnızca süre/mesafe hesaplanır.
-// Bugün "kullanmayacağım" diyen yolcuların durakları rotaya alınmaz.
+// Başlangıç: verilen konum → aracın son görülen konumu → ilk durak.
+// Bitiş: aracın varış noktası (fabrika/okul) varsa orada biter; yoksa son yolcuda.
+// Sıra: rota modu "manual" ise yöneticinin alış sırası (stops.pickup_order);
+//       "auto" ise yollardan en hızlı sıra (Google Routes; anahtar yoksa OSRM).
+// Çizim (polyline), süre ve mesafe gerçek yollara göredir. Bugün "kullanmayacağım"
+// diyen yolcular rotaya alınmaz.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { bestRoute, type LL } from "../_shared/roads.ts";
 
-type LatLng = { lat: number; lng: number };
 type StopIn = { stop_id: string; passenger_id: string; lat: number; lng: number; address: string | null; pickup_order?: number | null };
-type StopOut = StopIn & { eta_s: number; dist_m: number };
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -31,99 +28,13 @@ function secretKey(): string {
   if (keys) { try { const k = JSON.parse(keys)["default"]; if (k) return k; } catch { /* */ } }
   return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 }
-
-// ---------------- Yedek algoritma ----------------
-const R = 6371000;
-export function haversine(a: LatLng, b: LatLng) {
-  const toRad = (x: number) => (x * Math.PI) / 180;
-  const dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
-const ROAD_FACTOR = 1.35;        // kuş uçuşu → yol mesafesi
-const CITY_SPEED_MS = 25 / 3.6;  // şehir içi ortalama 25 km/s
-const STOP_DWELL_S = 45;         // durakta bekleme
-
-function pathLen(origin: LatLng, seq: LatLng[], end: LatLng | null) {
-  let d = 0, prev = origin;
-  for (const p of seq) { d += haversine(prev, p); prev = p; }
-  if (end) d += haversine(prev, end);
-  return d;
-}
-
-/** En yakın komşu + 2-opt. Bitiş sabitse ara durakların sırası optimize edilir. */
-export function fallbackOrder(origin: LatLng, stops: StopIn[], end: LatLng | null): StopIn[] {
-  const left = [...stops];
-  const seq: StopIn[] = [];
-  let cur: LatLng = origin;
-  while (left.length) {
-    let bi = 0, bd = Infinity;
-    left.forEach((s, i) => { const d = haversine(cur, s); if (d < bd) { bd = d; bi = i; } });
-    cur = left[bi];
-    seq.push(left.splice(bi, 1)[0]);
-  }
-  let improved = true;
-  while (improved) {
-    improved = false;
-    for (let i = 0; i < seq.length - 1; i++) {
-      for (let k = i + 1; k < seq.length; k++) {
-        const cand = [...seq.slice(0, i), ...seq.slice(i, k + 1).reverse(), ...seq.slice(k + 1)];
-        if (pathLen(origin, cand, end) + 1 < pathLen(origin, seq, end)) { seq.splice(0, seq.length, ...cand); improved = true; }
-      }
-    }
-  }
-  return seq;
-}
-
-function withEta(origin: LatLng, seq: StopIn[], legs?: { distanceMeters?: number; duration?: string }[]): StopOut[] {
-  let t = 0, d = 0, prev = origin;
-  return seq.map((s, i) => {
-    if (legs?.[i]) {
-      d += legs[i].distanceMeters ?? 0;
-      t += parseInt((legs[i].duration ?? "0s").replace("s", ""), 10);
-    } else {
-      const seg = haversine(prev, s) * ROAD_FACTOR;
-      d += seg; t += seg / CITY_SPEED_MS;
-    }
-    const out = { ...s, eta_s: Math.round(t), dist_m: Math.round(d) };
-    t += STOP_DWELL_S; prev = s;
-    return out;
-  });
-}
-
-// ---------------- Google Routes API ----------------
-async function googleRoute(key: string, origin: LatLng, inter: StopIn[], dest: LatLng, optimize = true) {
-  const ll = (p: LatLng) => ({ location: { latLng: { latitude: p.lat, longitude: p.lng } } });
-  const r = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": key,
-      "X-Goog-FieldMask": "routes.optimizedIntermediateWaypointIndex,routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline,routes.legs.distanceMeters,routes.legs.duration",
-    },
-    body: JSON.stringify({
-      origin: ll(origin), destination: ll(dest), intermediates: inter.map(ll),
-      travelMode: "DRIVE", routingPreference: "TRAFFIC_AWARE",
-      optimizeWaypointOrder: optimize && inter.length > 1, languageCode: "tr-TR", units: "METRIC",
-    }),
-  });
-  if (!r.ok) throw new Error(`Google Routes ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  const route = (await r.json()).routes?.[0];
-  if (!route) throw new Error("Google Routes: rota bulunamadı");
-  const order: number[] = route.optimizedIntermediateWaypointIndex?.length ? route.optimizedIntermediateWaypointIndex : inter.map((_, i) => i);
-  return {
-    order, legs: route.legs as { distanceMeters?: number; duration?: string }[],
-    distance_m: route.distanceMeters as number,
-    duration_s: parseInt(String(route.duration ?? "0s").replace("s", ""), 10),
-    polyline: route.polyline?.encodedPolyline as string | undefined,
-  };
-}
+const STOP_DWELL_S = 45; // durakta bekleme
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, secretKey(), { auth: { persistSession: false, autoRefreshToken: false } });
 
-  let body: { vehicle_id?: string; origin?: LatLng };
+  let body: { vehicle_id?: string; origin?: LL };
   try { body = await req.json(); } catch { return json(400, { error: "Geçersiz istek" }); }
   const vehicleId = body.vehicle_id;
   if (!vehicleId) return json(400, { error: "vehicle_id gerekli" });
@@ -163,53 +74,33 @@ Deno.serve(async (req) => {
   if (manual) active.sort((a, b) => (a.pickup_order ?? 1e9) - (b.pickup_order ?? 1e9));
 
   // --- Başlangıç ---
-  let origin: LatLng | null = body.origin && Number.isFinite(body.origin.lat) ? body.origin : null;
+  let origin: LL | null = body.origin && Number.isFinite(body.origin.lat) ? body.origin : null;
   if (!origin) {
     const { data: lp } = await admin.from("vehicle_last_positions").select("lat, lng").eq("vehicle_id", vehicleId).maybeSingle();
     if (lp) origin = { lat: lp.lat, lng: lp.lng };
   }
   if (!origin && active.length) origin = { lat: active[0].lat, lng: active[0].lng };
+  const fixedEnd: LL | null = vehicle.end_lat != null && vehicle.end_lng != null ? { lat: vehicle.end_lat, lng: vehicle.end_lng } : null;
 
-  const fixedEnd: LatLng | null = vehicle.end_lat != null && vehicle.end_lng != null ? { lat: vehicle.end_lat, lng: vehicle.end_lng } : null;
-
-  let ordered: StopOut[] = [];
-  let source: "google" | "fallback" = "fallback";
+  let ordered: (StopIn & { eta_s: number; dist_m: number })[] = [];
+  let source: "google" | "osrm" | "fallback" = "osrm";
   let distance_m: number | null = null, duration_s: number | null = null, polyline: string | null = null;
-  let note: string | undefined;
 
   if (origin && active.length) {
-    // Bitiş: sabit nokta yoksa başlangıca en uzak durak (rotanın "son yolcusu")
-    let inter = active, endStop: StopIn | null = null;
-    if (manual && !fixedEnd) {
-      endStop = active[active.length - 1]; inter = active.slice(0, -1);
-    } else if (!fixedEnd && active.length > 1) {
-      endStop = active.reduce((a, b) => (haversine(origin!, b) > haversine(origin!, a) ? b : a));
-      inter = active.filter((s) => s !== endStop);
-    } else if (!fixedEnd) {
-      endStop = active[0]; inter = [];
-    }
-    const dest = fixedEnd ?? endStop!;
-
-    const key = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    if (key) {
-      try {
-        const g = await googleRoute(key, origin, inter, dest, !manual);
-        const seq = [...g.order.map((i) => inter[i]), ...(endStop ? [endStop] : [])];
-        ordered = withEta(origin, seq, g.legs);
-        source = "google"; distance_m = g.distance_m; duration_s = g.duration_s; polyline = g.polyline ?? null;
-      } catch (e) {
-        note = String(e);
+    // noktalar: 0 = başlangıç, 1..n = duraklar, (n+1) = varış noktası
+    const pts: LL[] = [origin, ...active, ...(fixedEnd ? [fixedEnd] : [])];
+    const endIdx = fixedEnd ? pts.length - 1 : undefined;
+    const r = await bestRoute(pts, { startIdx: 0, endIdx, fixedOrder: manual });
+    source = r.source; polyline = r.polyline; distance_m = r.distance_m; duration_s = r.duration_s;
+    let t = 0, d = 0;
+    r.order.forEach((pi, k) => {
+      if (k > 0) { t += r.legs[k - 1]?.duration_s ?? 0; d += r.legs[k - 1]?.distance_m ?? 0; }
+      if (pi >= 1 && pi <= active.length) {
+        ordered.push({ ...active[pi - 1], eta_s: Math.round(t), dist_m: Math.round(d) });
+        t += STOP_DWELL_S;
       }
-    } else {
-      note = "GOOGLE_MAPS_API_KEY tanımlı değil — yedek algoritma kullanıldı";
-    }
-    if (source === "fallback") {
-      const seq = [...(manual ? inter : fallbackOrder(origin, inter, dest)), ...(endStop ? [endStop] : [])];
-      ordered = withEta(origin, seq);
-      const last = ordered[ordered.length - 1];
-      distance_m = last.dist_m + (fixedEnd ? Math.round(haversine(last, fixedEnd) * ROAD_FACTOR) : 0);
-      duration_s = last.eta_s + (fixedEnd ? Math.round(haversine(last, fixedEnd) * ROAD_FACTOR / CITY_SPEED_MS) : 0);
-    }
+    });
+    duration_s = Math.round((duration_s ?? 0) + STOP_DWELL_S * ordered.length);
   }
 
   const row = {
@@ -221,5 +112,5 @@ Deno.serve(async (req) => {
   const { error } = await admin.from("daily_routes").upsert(row, { onConflict: "vehicle_id,service_date" });
   if (error) return json(500, { error: "Rota kaydedilemedi", detail: error.message });
 
-  return json(200, { ok: true, source, mode: manual ? "manual" : "auto", note, stops: ordered.length, absent: absent.size, distance_m, duration_s });
+  return json(200, { ok: true, source, mode: manual ? "manual" : "auto", stops: ordered.length, absent: absent.size, distance_m, duration_s, has_polyline: !!polyline });
 });

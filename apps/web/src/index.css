@@ -351,3 +351,11 @@ ol.pickup .arrows button { padding: 4px 9px; font-size: 11px; }
 @media (prefers-reduced-motion: reduce) {
   .side { transition: none; }
 }
+
+/* güzergâh özeti (yollar üzerinden) */
+.routesum { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; border: 1px solid var(--line); border-left: 4px solid var(--primary); border-radius: var(--r-sm); padding: 9px 12px; margin: 0 0 10px; background: #F7FAFD; font-size: 14px; transition: opacity .2s; }
+.routesum > b { font-family: var(--cond); font-size: 20px; color: var(--ink); font-weight: 600; }
+.routesum small { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+.routesum.busy { opacity: .6; }
+ol.pickup .leg { margin-left: 8px; font-weight: 500; font-size: 12.5px; color: var(--muted); background: #EEF1F5; border-radius: 999px; padding: 1px 7px; }
+@media (prefers-reduced-motion: reduce) { .routesum { transition: none; } }

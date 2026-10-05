@@ -40,3 +40,9 @@ Sonuç: 37/37 test geçti
 37. Platform yöneticisi şirketten çıkar  GEÇTİ
 
 Ayrıca: yerel SQL testleri 159/159 (admin_panel.sql 36 yeni), önceki uçtan uca test (dev-e2e) 47/47.
+
+--- Yol üzerinden rota (dev-roads) — 2026-10-05: 12/12 test geçti
+Önizleme yollardan çizilir (OSRM, 900+ nokta) · tüm duraklar sırada, gerçekçi km/süre · her bacak için süre ·
+kaydedilmemiş sıra önizlemesi · farklı sıra farklı mesafe · otomatik sıra ters sıradan uzun değil ·
+başka şirket 404 · yolcu 403 · sürücü 403 · sürücü rotası yollardan hesaplanır · sürücü yol çizgisini okur · varış süreleri artan
+Örnek (34 DMO 01): Üsküdar → Moda → Kozyatağı → Ataşehir, 23,6 km, ~34 dk.

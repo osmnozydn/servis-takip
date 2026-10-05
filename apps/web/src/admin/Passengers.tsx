@@ -2,13 +2,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { formatPhone } from '@servis/shared';
 import { supabase } from '../lib/supabase';
-import { callFn, genPassword, normalizePhone, PERSON_COLUMNS, pgError, slugUsername, VEHICLE_COLUMNS, type PersonRow, type VehicleRow } from './common';
+import { callFn, decodePolyline, fmtKm, fmtMin, genPassword, normalizePhone, PERSON_COLUMNS, pgError, slugUsername, VEHICLE_COLUMNS, type PersonRow, type VehicleRow } from './common';
 import { StopMap, type MapStop, type PickedPoint } from './StopMap';
 import { CredentialsBox, Field, Notice, PasswordField, Plate } from './ui';
 
 type Ctx = { companyId: string; companyCode: string };
 type StopRow = { id: string; passenger_id: string; vehicle_id: string; lat: number; lng: number; address: string | null; pickup_order: number | null };
 type Item = PersonRow & { stop: StopRow | null };
+type Preview = {
+  mode: 'auto' | 'manual'; order: string[]; polyline: string | null; source: 'google' | 'osrm' | 'fallback';
+  legs: { distance_m: number; duration_s: number }[]; distance_m: number; duration_s: number;
+};
 
 export function Passengers({ companyCode }: Ctx) {
   const [vehicles, setVehicles] = useState<VehicleRow[] | null>(null);
@@ -21,6 +25,8 @@ export function Passengers({ companyCode }: Ctx) {
   const [focus, setFocus] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [routing, setRouting] = useState(false);
 
   async function load(keepVehicle = vehicleId) {
     const [{ data: v }, { data: p }, { data: s }] = await Promise.all([
@@ -48,15 +54,40 @@ export function Passengers({ companyCode }: Ctx) {
   useEffect(() => setMsg(null), [vehicleId]);
 
   const byId = useMemo(() => Object.fromEntries(items.map((i) => [i.id, i])), [items]);
-  const ordered = order.map((id) => byId[id]).filter(Boolean);
+  // Otomatik modda (değişiklik yokken) liste, yollardan hesaplanan en hızlı sırayı gösterir
+  const autoShown = !dirty && vehicle?.route_mode === 'auto' && preview?.mode === 'auto' && preview.order.length > 0;
+  const shownIds = useMemo(() => {
+    if (!autoShown) return order;
+    const pos = new Map(preview!.order.map((id, k) => [id, k]));
+    return [...order].sort((a, b) => (pos.get(a) ?? 1e9) - (pos.get(b) ?? 1e9));
+  }, [autoShown, order, preview]);
+  const ordered = shownIds.map((id) => byId[id]).filter(Boolean);
   const withStop = ordered.filter((i) => i.stop);
 
   function move(idx: number, delta: number) {
     const j = idx + delta;
-    if (j < 0 || j >= order.length) return;
-    const next = [...order]; [next[idx], next[j]] = [next[j], next[idx]];
+    if (j < 0 || j >= shownIds.length) return;
+    const next = [...shownIds]; [next[idx], next[j]] = [next[j], next[idx]];
     setOrder(next); setDirty(true); setMsg(null);
   }
+
+  // Güzergâh önizlemesi (yollar üzerinden). Sıra elle değiştirilirken kısa bir gecikmeyle yeniden çizilir.
+  const stopKey = withStop.map((i) => `${i.id}:${i.stop!.lat},${i.stop!.lng}`).join('|');
+  const wantedOrder = dirty ? withStop.map((i) => i.id) : null;
+  useEffect(() => {
+    if (!vehicle || vehicleId === '__none') { setPreview(null); return; }
+    let cancelled = false;
+    setRouting(true);
+    const t = setTimeout(async () => {
+      const r = await callFn<Preview>('route-preview', { vehicle_id: vehicle.id, ...(wantedOrder ? { order: wantedOrder } : {}) });
+      if (cancelled) return;
+      setPreview(r.ok ? r.data : null);
+      setRouting(false);
+    }, wantedOrder ? 450 : 0);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [vehicle?.id, vehicle?.route_mode, vehicle?.end_lat, vehicle?.end_lng, dirty, wantedOrder?.join(','), stopKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const path = useMemo(() => decodePolyline(preview?.polyline), [preview?.polyline]);
+  const legBefore = (k: number) => (k > 0 ? preview?.legs[k - 1] : undefined);
   async function saveOrder() {
     if (!vehicle) return;
     setBusy(true);
@@ -101,15 +132,23 @@ export function Passengers({ companyCode }: Ctx) {
           <div>
             <div className="modebar">
               <span>Rota:</span>
-              <button className={vehicle.route_mode === 'auto' ? 'on' : ''} onClick={() => setMode('auto')}>Otomatik (en kısa)</button>
+              <button className={vehicle.route_mode === 'auto' ? 'on' : ''} onClick={() => setMode('auto')}>Otomatik (en hızlı)</button>
               <button className={vehicle.route_mode === 'manual' ? 'on' : ''} onClick={() => setMode('manual')}>Alış sırasına göre</button>
             </div>
             <p className="muted small">
               {vehicle.route_mode === 'manual'
                 ? 'Sürücü yolcuları aşağıdaki sırayla alır. Okları kullanarak sırayı değiştirin ve kaydedin.'
-                : 'Şu an rota otomatik (en kısa yol) hesaplanıyor. Sırayı değiştirip kaydederseniz “Alış sırasına göre” moduna geçilir.'}
+                : 'Liste, yollardan hesaplanan en hızlı sırayı gösteriyor; sürücü servise başlayınca kendi konumuna göre yeniden hesaplanır. Sırayı değiştirip kaydederseniz “Alış sırasına göre” moduna geçilir.'}
               {vehicle.capacity ? ` · Kapasite ${ordered.length}/${vehicle.capacity}` : ''}
             </p>
+            {withStop.length > 1 || (withStop.length === 1 && vehicle.end_lat != null) ? (
+              <div className={`routesum ${routing ? 'busy' : ''}`} aria-live="polite">
+                {preview && preview.distance_m > 0 ? (<>
+                  <b>{fmtKm(preview.distance_m)}</b><span>yaklaşık <b>{fmtMin(preview.duration_s)}</b> sürüş</span>
+                  <small>{preview.source === 'fallback' ? 'Yol servisine ulaşılamadı, kuş uçuşu tahmin' : preview.source === 'google' ? 'Google Haritalar, trafiğe göre' : 'Yollara göre (OpenStreetMap), duraklarda bekleme hariç'}</small>
+                </>) : <span>{routing ? 'Güzergâh yollardan hesaplanıyor…' : 'Güzergâh hesaplanamadı.'}</span>}
+              </div>
+            ) : null}
             {dirty && (
               <div className="savebar">
                 <span>Sıra değişti — kaydedilmedi</span>
@@ -123,7 +162,7 @@ export function Passengers({ companyCode }: Ctx) {
                   <li key={i.id} className={!i.stop ? 'nostop' : focus === i.id ? 'focus' : ''} onMouseEnter={() => i.stop && setFocus(i.id)}>
                     <span className="num">{i.stop ? withStop.indexOf(i) + 1 : '–'}</span>
                     <div className="who" onClick={() => setView(i)}>
-                      <b>{i.full_name}</b>
+                      <b>{i.full_name}{i.stop && legBefore(withStop.indexOf(i)) && !routing ? <span className="leg">+{fmtMin(legBefore(withStop.indexOf(i))!.duration_s)}</span> : null}</b>
                       <small className="muted">{i.stop ? i.stop.address || `${i.stop.lat.toFixed(5)}, ${i.stop.lng.toFixed(5)}` : 'Durak tanımlı değil — tıklayıp ekleyin'}</small>
                     </div>
                     <div className="arrows">
@@ -132,12 +171,12 @@ export function Passengers({ companyCode }: Ctx) {
                     </div>
                   </li>
                 ))}
-                {vehicle.end_lat != null && <li className="endpt"><span className="num">★</span><div className="who"><b>{vehicle.end_label ?? 'Varış noktası'}</b><small className="muted">Rota burada biter</small></div></li>}
+                {vehicle.end_lat != null && <li className="endpt"><span className="num">★</span><div className="who"><b>{vehicle.end_label ?? 'Varış noktası'}{withStop.length && preview?.legs[withStop.length - 1] && !routing ? <span className="leg">+{fmtMin(preview.legs[withStop.length - 1].duration_s)}</span> : null}</b><small className="muted">Rota burada biter</small></div></li>}
               </ol>
             )}
             {msg && <Notice kind={msg.kind}>{msg.text}</Notice>}
           </div>
-          <StopMap key={vehicle.id} stops={mapStops} focus={focus}
+          <StopMap key={vehicle.id} stops={mapStops} focus={focus} path={path}
             end={vehicle.end_lat != null ? { lat: vehicle.end_lat, lng: vehicle.end_lng!, label: vehicle.end_label ?? 'Varış' } : null} height={460} />
         </div>
       )}

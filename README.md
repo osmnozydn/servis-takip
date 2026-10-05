@@ -80,6 +80,8 @@ KVKK metni `packages/shared/src/consent.ts` içinde **taslaktır**; canlıdan ö
 | `dev-e2e` | **Geliştirme:** sanal kullanıcılarla uçtan uca test (47 test, sonuç `dev_test_runs` tablosuna) |
 | `dev-sim` | **Geliştirme:** canlı konum simülasyonu (16 test, gecikme ölçümü) |
 | `dev-admin` | **Geliştirme:** yönetim paneli uçtan uca testi — şirket açma, belge erişimi, alış sırası (37 test) |
+| `route-preview` | Yönetici: aracın yollardan geçen güzergâh önizlemesi (otomatik en hızlı sıra veya verilen sıra) |
+| `dev-roads` | **Geliştirme:** yol üzerinden rota testleri (12 test) |
 | `dev-trip` | **Geliştirme:** demo sefer verisi üretir (bir durağa uğranmayan sefer dahil) ve sefer geçmişini doğrular (15 test) |
 
 `dev-*` fonksiyonları veritabanındaki gizli anahtarla korunur ve canlıya çıkmadan önce silinecektir.
@@ -105,9 +107,13 @@ Konum geçmişi 30 gün sonra otomatik silinir (pg_cron).
 Kapalıyken "bir sonraki: yarın 06:30" gibi bilgi gösterilir. Kendi sırasını ve tahmini varış süresini
 `my_route_info()` ile görür; diğer yolcuların durakları gizlidir.
 
-**Rota:** `compute-route` başlangıç (sürücünün konumu) → duraklar → bitiş (aracın `end_lat/lng` noktası
-veya en uzak durak). `GOOGLE_MAPS_API_KEY` sırrı tanımlanınca Google Routes API (`optimizeWaypointOrder`)
-kullanılır; tanımlı değilse en yakın komşu + 2-opt yedek algoritması çalışır.
+**Rota (yollar üzerinden):** Ortak modül `supabase/functions/_shared/roads.ts`. Duraklar düz çizgiyle değil, gerçek yol
+ağı üzerinden bağlanır; sıra en hızlı sürüş süresine göre seçilir. Sağlayıcı: `GOOGLE_MAPS_API_KEY` sırrı tanımlıysa
+Google Routes API (trafiğe göre), değilse OSRM (OpenStreetMap yol verisi). Varsayılan OSRM adresi genel deneme sunucusudur
+(`router.project-osrm.org`, yoğun ticari kullanım için uygun değil); canlıda Google anahtarı veya `OSRM_URL` sırrıyla kendi
+OSRM sunucunuz kullanılmalı. İkisine de ulaşılamazsa kuş uçuşu tahmine düşülür.
+- `compute-route`: sürücünün konumu → duraklar → (varsa) varış noktası; yol çizgisi `daily_routes.polyline`'a yazılır, sürücü haritasında çizilir.
+- `route-preview`: yönetim panelinde aracın güzergâhını ve toplam km/süreyi gösterir; sıra elle değiştirilirken çizgi anında güncellenir.
 
 **Devamsızlık:** yolcu "Bugün kullanmayacağım" deyince durak bugünkü rotadan saniyeler içinde çıkar
 (veritabanı tetikleyicisi → `compute-route`); geri alınca tekrar eklenir.

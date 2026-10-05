@@ -149,3 +149,25 @@ export function pgError(e: { code?: string; message?: string } | null, fallback 
   if (e.code === '42501') return 'Bu işlem için yetkiniz yok.';
   return fallback;
 }
+
+/** Google/OSRM "encoded polyline" (hassasiyet 5) → [enlem, boylam] listesi */
+export function decodePolyline(s: string | null | undefined): [number, number][] {
+  if (!s) return [];
+  const out: [number, number][] = [];
+  let i = 0, lat = 0, lng = 0;
+  while (i < s.length) {
+    for (let k = 0; k < 2; k++) {
+      let r = 0, sh = 0, b: number;
+      do { b = s.charCodeAt(i++) - 63; r |= (b & 31) << sh; sh += 5; } while (b >= 32 && i < s.length);
+      const v = r & 1 ? ~(r >> 1) : r >> 1;
+      if (k === 0) lat += v; else lng += v;
+    }
+    out.push([lat / 1e5, lng / 1e5]);
+  }
+  return out;
+}
+export const fmtKm = (m: number) => (m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} km`);
+export const fmtMin = (s: number) => {
+  const m = Math.max(1, Math.round(s / 60));
+  return m < 60 ? `${m} dk` : `${Math.floor(m / 60)} sa ${m % 60 ? `${m % 60} dk` : ''}`.trim();
+};
