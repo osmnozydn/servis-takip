@@ -46,6 +46,12 @@
           "motionUsagePermission": false
         }
       ]
-    ]
+    ],
+    "owner": "osmnozydn",
+    "extra": {
+      "eas": {
+        "projectId": "7541e876-0461-44cc-9d9d-f0586f3c0aa6"
+      }
+    }
   }
 }
