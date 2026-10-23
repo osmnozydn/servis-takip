@@ -6,7 +6,8 @@ export interface Trip {
   service_date: string;
   started_at: string;
   ended_at: string | null;
-  end_reason: 'driver' | 'inactivity' | null;
+  end_reason: 'driver' | 'inactivity' | 'factory' | 'last_stop' | null;
+  direction?: 'to_factory' | 'from_factory' | null;
   distance_m: number;
   position_count: number;
 }

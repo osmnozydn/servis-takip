@@ -5,7 +5,7 @@
 //        (b) veritabanı tetikleyicisi (x-internal-secret)
 //
 // Başlangıç: verilen konum → aracın son görülen konumu → ilk durak.
-// Bitiş: aracın varış noktası (fabrika/okul) varsa orada biter; yoksa son yolcuda.
+// Bitiş: sabah seferinde aracın fabrikası (varsa); akşam seferinde (fabrikadan dönüş) son yolcu.
 // Sıra: rota modu "manual" ise yöneticinin alış sırası (stops.pickup_order);
 //       "auto" ise yollardan en hızlı sıra (Google Routes; anahtar yoksa OSRM).
 // Çizim (polyline), süre ve mesafe gerçek yollara göredir. Bugün "kullanmayacağım"
@@ -80,7 +80,9 @@ Deno.serve(async (req) => {
     if (lp) origin = { lat: lp.lat, lng: lp.lng };
   }
   if (!origin && active.length) origin = { lat: active[0].lat, lng: active[0].lng };
-  const fixedEnd: LL | null = vehicle.end_lat != null && vehicle.end_lng != null ? { lat: vehicle.end_lat, lng: vehicle.end_lng } : null;
+  const { data: direction } = await admin.rpc("vehicle_direction_now", { p_vehicle: vehicleId });
+  const toFactory = direction !== "from_factory";
+  const fixedEnd: LL | null = toFactory && vehicle.end_lat != null && vehicle.end_lng != null ? { lat: vehicle.end_lat, lng: vehicle.end_lng } : null;
 
   let ordered: (StopIn & { eta_s: number; dist_m: number })[] = [];
   let source: "google" | "osrm" | "fallback" = "osrm";
@@ -112,5 +114,5 @@ Deno.serve(async (req) => {
   const { error } = await admin.from("daily_routes").upsert(row, { onConflict: "vehicle_id,service_date" });
   if (error) return json(500, { error: "Rota kaydedilemedi", detail: error.message });
 
-  return json(200, { ok: true, source, mode: manual ? "manual" : "auto", stops: ordered.length, absent: absent.size, distance_m, duration_s, has_polyline: !!polyline });
+  return json(200, { ok: true, source, direction: toFactory ? "to_factory" : "from_factory", mode: manual ? "manual" : "auto", stops: ordered.length, absent: absent.size, distance_m, duration_s, has_polyline: !!polyline });
 });

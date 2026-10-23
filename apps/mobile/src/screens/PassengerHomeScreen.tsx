@@ -12,7 +12,15 @@ import { LiveMap, type MapPoint } from '../ui/LiveMap';
 import { VehicleCard } from '../ui/VehicleCard';
 import { colors } from '../ui/theme';
 
-type Visibility = { has_vehicle: boolean; open?: boolean; open_until?: string | null; next_open?: string | null };
+type Dir = 'to_factory' | 'from_factory' | null;
+type Visibility = {
+  has_vehicle: boolean; open?: boolean; open_until?: string | null; next_open?: string | null;
+  current?: { direction: Dir; service_time: string | null; visible_from: string; until: string } | null;
+  next?: { direction: Dir; service_time: string | null; visible_from: string; date: string } | null;
+  trip?: { state: 'live' | 'completed'; direction: Dir; started_at: string; ended_at: string | null; end_reason: string | null } | null;
+};
+const dirName = (d: Dir) => (d === 'from_factory' ? 'Akşam servisi' : d === 'to_factory' ? 'Sabah servisi' : 'Servis');
+const hhmm = (iso: string) => new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }).format(new Date(iso));
 type RouteInfo = { available: boolean; absent_today?: boolean; my_order?: number; total_stops?: number; eta_s_from_start?: number };
 type LastPos = { lat: number; lng: number; recorded_at: string; speed: number | null };
 
@@ -54,6 +62,15 @@ export function PassengerHomeScreen() {
     return () => sub.remove();
   }, [refresh]);
 
+  // Bildirim gelince (araç yola çıktı) ekranı hemen tazele
+  useEffect(() => {
+    if (!profile?.id) return;
+    const ch = supabase.channel(`pnote-${profile.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${profile.id}` }, () => { refresh(); })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [profile?.id, refresh]);
+
   // Canlı konum (sunucu yalnızca pencere açıkken gönderir)
   useEffect(() => {
     if (!vehicleId || !vis?.open) return;
@@ -91,9 +108,16 @@ export function PassengerHomeScreen() {
           : vis.open ? (
             <>
               <View style={styles.row}>
-                <Text style={styles.h}>Servis aracı</Text>
+                <Text style={styles.h}>{dirName(vis.current?.direction ?? null)}{vis.current?.service_time ? ` · ${vis.current.service_time}` : ''}</Text>
                 <Text style={styles.meta}>{vis.open_until ? `${vis.open_until}'e kadar görünür` : ''}</Text>
               </View>
+              {vis.trip?.state === 'live' ? (
+                <View style={[styles.banner, styles.bannerLive]}><View style={styles.liveDot} /><Text style={styles.bannerText}>Aracınız yolda · {hhmm(vis.trip.started_at)}'de yola çıktı</Text></View>
+              ) : vis.trip?.state === 'completed' && vis.trip.ended_at ? (
+                <View style={[styles.banner, styles.bannerDone]}><Text style={styles.bannerText}>✓ {dirName(vis.trip.direction)} tamamlandı · {vis.trip.end_reason === 'factory' ? 'araç fabrikaya ulaştı' : vis.trip.end_reason === 'last_stop' ? 'son yolcu bırakıldı' : 'sefer bitti'} ({hhmm(vis.trip.ended_at)})</Text></View>
+              ) : (
+                <View style={[styles.banner, styles.bannerWait]}><Text style={styles.bannerText}>Servis henüz yola çıkmadı{vis.current?.service_time ? ` · kalkış ${vis.current.service_time}` : ''}. Araç hareket edince bildirim alacaksınız.</Text></View>
+              )}
               <LiveMap vehicle={pos} stops={myStop ? [{ ...myStop, mine: true }] : []} height={300} />
               <Text style={[styles.meta, { marginTop: 8 }]}>
                 {pos
@@ -105,9 +129,20 @@ export function PassengerHomeScreen() {
             </>
           ) : (
             <View style={styles.closed}>
+              <View style={styles.closedBadge}><Text style={styles.closedBadgeText}>SERVİS ŞU AN AKTİF DEĞİL</Text></View>
               <Text style={styles.closedIcon}>🕑</Text>
-              <Text style={styles.h}>Aracın konumu şu an görünmüyor</Text>
-              <Text style={styles.p}>Konum, servis saatlerinde görünür. Bir sonraki: <Text style={{ fontWeight: '700' }}>{friendlyNextOpen(vis.next_open)}</Text></Text>
+              <Text style={styles.h}>Aracın konumu servis saatlerinde görünür</Text>
+              {vis.next ? (
+                <Text style={[styles.p, { textAlign: 'center' }]}>
+                  Sıradaki: <Text style={{ fontWeight: '700' }}>{dirName(vis.next.direction)}{vis.next.service_time ? ` · kalkış ${vis.next.service_time}` : ''}</Text>{'\n'}
+                  Aracı <Text style={{ fontWeight: '700' }}>{friendlyNextOpen(vis.next_open)}</Text> itibarıyla buradan izleyebilirsiniz.
+                </Text>
+              ) : (
+                <Text style={[styles.p, { textAlign: 'center' }]}>Tanımlı bir servis saati yok. Yöneticinizle iletişime geçin.</Text>
+              )}
+              {vis.trip?.state === 'completed' && vis.trip.ended_at ? (
+                <Text style={styles.meta}>Son sefer: {dirName(vis.trip.direction)} {hhmm(vis.trip.ended_at)}'de tamamlandı.</Text>
+              ) : null}
             </View>
           )}
       </Card>
@@ -146,6 +181,14 @@ const styles = StyleSheet.create({
   p: { fontSize: 15, color: colors.text, lineHeight: 21, marginVertical: 8 },
   meta: { fontSize: 13, color: colors.muted },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  closed: { alignItems: 'center', paddingVertical: 12 },
+  closed: { alignItems: 'center', paddingVertical: 12, gap: 2 },
+  closedBadge: { backgroundColor: '#FDECEC', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginBottom: 10 },
+  closedBadgeText: { color: colors.danger, fontWeight: '800', fontSize: 12, letterSpacing: 0.6 },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 10 },
+  bannerLive: { backgroundColor: '#E6F3E7' },
+  bannerDone: { backgroundColor: '#E9EFF6' },
+  bannerWait: { backgroundColor: '#FFF4D6' },
+  bannerText: { flex: 1, fontSize: 14, color: colors.text, fontWeight: '600' },
+  liveDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: colors.success },
   closedIcon: { fontSize: 36, marginBottom: 8 },
 });

@@ -18,6 +18,13 @@ import { VehicleCard } from '../ui/VehicleCard';
 import { colors } from '../ui/theme';
 
 type RouteStop = { passenger_id: string; lat: number; lng: number; address: string | null; eta_s: number };
+type TripState = {
+  open: { id: string; started_at: string; direction: 'to_factory' | 'from_factory' | null } | null;
+  last: { id: string; started_at: string; ended_at: string; end_reason: string; direction: string | null } | null;
+  factory: { name: string; lat: number; lng: number; radius_m: number } | null;
+} | null;
+const hhmm = (iso: string) => new Intl.DateTimeFormat('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' }).format(new Date(iso));
+
 type DailyRoute = { stops: RouteStop[]; polyline: string | null; distance_m: number | null; duration_s: number | null; source: string; computed_at: string };
 
 export function DriverHomeScreen() {
@@ -29,6 +36,8 @@ export function DriverHomeScreen() {
   const [route, setRoute] = useState<DailyRoute | null>(null);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [trip, setTrip] = useState<TripState>(null);
+  const [autoDone, setAutoDone] = useState<string | null>(null);
 
   useEffect(() => subscribeStatus(setStatus), []);
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 15000); return () => clearInterval(t); }, []);
@@ -101,6 +110,32 @@ export function DriverHomeScreen() {
     return () => { supabase.removeChannel(ch); };
   }, [vehicleId, loadRoute]);
 
+  // Sefer durumu: sabah fabrikaya / akşam son yolcuya varınca sunucu seferi kendiliğinden tamamlar;
+  // o zaman konum yayını da burada durdurulur (sürücünün düğmeye basması gerekmez).
+  useEffect(() => {
+    if (!vehicleId) return;
+    let alive = true;
+    let sawOpen = false;
+    const check = async () => {
+      const { data } = await supabase.rpc('my_trip_state');
+      if (!alive) return;
+      const st = (data as TripState) ?? null;
+      setTrip(st);
+      if (st?.open) sawOpen = true;
+      const last = st?.last;
+      if (!st?.open && last && (last.end_reason === 'factory' || last.end_reason === 'last_stop')
+          && Date.now() - Date.parse(last.ended_at) < 15 * 60_000 && (sawOpen || await isTracking())) {
+        if (await isTracking()) { await stopTracking(); setTracking(false); }
+        setAutoDone(last.end_reason === 'factory'
+          ? `Fabrikaya varıldı · ${hhmm(last.ended_at)}. Servis tamamlandı, konum yayını durduruldu.`
+          : `Son yolcuya ulaşıldı · ${hhmm(last.ended_at)}. Servis tamamlandı, konum yayını durduruldu.`);
+      }
+    };
+    void check();
+    const t = setInterval(check, 20_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [vehicleId]);
+
   async function stop() {
     setBusy(true);
     await stopTracking();
@@ -132,6 +167,21 @@ export function DriverHomeScreen() {
       <Text style={styles.hello}>{profile.vehicle?.plate ?? 'Servis'}</Text>
       <Text style={styles.sub}>{profile.full_name} · {profile.company?.name}</Text>
 
+      {autoDone ? (
+        <View style={styles.done}>
+          <Text style={styles.doneTitle}>✓ Servis tamamlandı</Text>
+          <Text style={styles.doneText}>{autoDone}</Text>
+        </View>
+      ) : null}
+      {trip?.open ? (
+        <View style={styles.tripPill}>
+          <Text style={styles.tripPillText}>
+            {trip.open.direction === 'from_factory' ? 'Akşam servisi · fabrikadan dönüş' : 'Sabah servisi · fabrikaya'} · {hhmm(trip.open.started_at)}'de başladı
+          </Text>
+          {trip.factory && trip.open.direction !== 'from_factory' ? <Text style={styles.tripPillSub}>Varış: {trip.factory.name} — yaklaşınca servis kendiliğinden tamamlanır</Text> : null}
+          {trip.open.direction === 'from_factory' ? <Text style={styles.tripPillSub}>Son yolcuyu bırakınca servis kendiliğinden tamamlanır</Text> : null}
+        </View>
+      ) : null}
       <Card>
         <View style={styles.statusRow}>
           <View style={[styles.dot, { backgroundColor: tracking ? (live ? colors.success : colors.accent) : colors.muted }]} />
@@ -174,7 +224,7 @@ export function DriverHomeScreen() {
         ) : null}
         {tracking
           ? <Button title="Servisi bitir (yayını durdur)" variant="ghost" onPress={stop} loading={busy} />
-          : <Button title="Servisi başlat" onPress={() => start(vehicleId)} loading={busy} />}
+          : <Button title="Servisi başlat" onPress={() => { setAutoDone(null); void start(vehicleId); }} loading={busy} />}
       </Card>
 
       <View style={{ height: 16 }} />
@@ -228,4 +278,10 @@ const styles = StyleSheet.create({
   badgeText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   stopAddr: { flex: 1, fontSize: 15, color: colors.text },
   stopEta: { fontSize: 13, color: colors.muted },
+  done: { backgroundColor: '#E6F3E7', borderRadius: 12, padding: 14, marginBottom: 12 },
+  doneTitle: { fontSize: 16, fontWeight: '800', color: colors.success, marginBottom: 2 },
+  doneText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  tripPill: { backgroundColor: '#E9EFF6', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
+  tripPillText: { fontSize: 14, fontWeight: '700', color: colors.primary },
+  tripPillSub: { fontSize: 12.5, color: colors.muted, marginTop: 2 },
 });

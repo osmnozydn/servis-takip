@@ -32,7 +32,7 @@ insert into public.stops (company_id, passenger_id, lat, lng, address) values
  ('c0000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-0000000a0014',40.9923,29.1244,'Ataşehir');
 -- Ataşehir yolcusu bugün gelmeyecek
 insert into public.absences (company_id, passenger_id, date) values
- ('c0000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-0000000a0014',(now() at time zone 'Europe/Istanbul')::date);
+ ('c0000000-0000-0000-0000-00000000000a','00000000-0000-0000-0000-0000000a0014',((now() - interval '60 min') at time zone 'Europe/Istanbul')::date);
 
 -- Sürücü: Moda (2 dk bekler) → Kozyatağı → Ataşehir yakınından geçer; Üsküdar'a HİÇ gitmez.
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000a0002"}',true);

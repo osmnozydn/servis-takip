@@ -9,10 +9,13 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { PassengerHomeScreen } from './src/screens/PassengerHomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { colors } from './src/ui/theme';
+import { useNotifications } from './src/notifications/notify';
 
 // Akış: giriş → (ilk girişse) şifre değiştir → (rıza yoksa) KVKK → ana ekran
 function Root() {
   const { loading, step, profile } = useAuth();
+  // Giriş tamamlanınca bildirim izni + push kaydı; uygulama açıkken canlı bildirim
+  useNotifications(step === 'home' ? profile?.id : null);
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>

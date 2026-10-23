@@ -122,11 +122,17 @@ export const WEEKDAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 export type VehicleRow = {
   id: string; plate: string; name: string | null; brand_model: string | null; color: string | null; capacity: number | null;
   route_mode: 'auto' | 'manual'; end_lat: number | null; end_lng: number | null; end_label: string | null;
+  factory_id: string | null;
 };
-export const VEHICLE_COLUMNS = 'id, plate, name, brand_model, color, capacity, route_mode, end_lat, end_lng, end_label';
+export const VEHICLE_COLUMNS = 'id, plate, name, brand_model, color, capacity, route_mode, end_lat, end_lng, end_label, factory_id';
+
+export type FactoryRow = { id: string; name: string; address: string | null; lat: number; lng: number; radius_m: number };
+export const FACTORY_COLUMNS = 'id, name, address, lat, lng, radius_m';
+export const DIRECTION_LABEL = { to_factory: 'Sabah · fabrikaya', from_factory: 'Akşam · fabrikadan' } as const;
+export type Direction = keyof typeof DIRECTION_LABEL;
 
 export type PersonRow = {
-  id: string; role: 'admin' | 'driver' | 'passenger'; username: string; full_name: string; phone: string | null;
+  id: string; role: 'admin' | 'operator' | 'driver' | 'passenger'; username: string; full_name: string; phone: string | null;
   vehicle_id: string | null; license_no: string | null; license_class: string | null; license_expires_on: string | null;
   must_change_password: boolean; created_at: string;
 };

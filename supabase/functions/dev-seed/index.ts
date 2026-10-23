@@ -16,7 +16,7 @@ function secretKey(): string {
 
 export const DEMO_PASSWORD = "Demo.2026!";
 
-type Person = { username: string; full_name: string; phone: string; role: "admin" | "driver" | "passenger"; vehicle?: string; stop?: [number, number, string] };
+type Person = { username: string; full_name: string; phone: string; role: "admin" | "operator" | "driver" | "passenger"; vehicle?: string; stop?: [number, number, string] };
 
 const DEMO = {
   code: "demo", name: "Demo Servis A.Ş.",
@@ -26,6 +26,7 @@ const DEMO = {
   ],
   people: [
     { username: "yonetici", full_name: "Demo Yönetici", phone: "05550000001", role: "admin" },
+    { username: "operasyon", full_name: "Demo Operasyon", phone: "05550000002", role: "operator" },
     { username: "surucu1", full_name: "Mehmet Sürücü", phone: "05550000011", role: "driver", vehicle: "V1" },
     { username: "surucu2", full_name: "Ahmet Sürücü",  phone: "05550000012", role: "driver", vehicle: "V2" },
     { username: "yolcu1", full_name: "Ayşe Yılmaz",   phone: "05550000101", role: "passenger", vehicle: "V1", stop: [40.9862, 29.0257, "Moda, Kadıköy"] },
@@ -37,7 +38,8 @@ const DEMO = {
     { username: "yolcu7", full_name: "Hüseyin Koç",   phone: "05550000107", role: "passenger", vehicle: "V2", stop: [41.0672, 28.9965, "Mecidiyeköy, Şişli"] },
     { username: "yolcu8", full_name: "Elif Aydın",    phone: "05550000108", role: "passenger", vehicle: "V2", stop: [41.0428, 29.0076, "Beşiktaş İskele"] },
   ] as Person[],
-  windows: [["06:30", "09:30"], ["16:30", "19:30"]],
+  windows: [["to_factory", "06:10", 30, "09:30"], ["from_factory", "17:30", 30, "20:00"]] as [string, string, number, string][],
+  factory: { name: "Demo Fabrika (Gebze OSB)", lat: 40.8135, lng: 29.4300, address: "Gebze Organize Sanayi Bölgesi, Kocaeli" },
 };
 
 // İzolasyon testleri için ikinci şirket: AYNI kullanıcı adları ve aynı yolcu telefonu
@@ -49,7 +51,8 @@ const DEMO_B = {
     { username: "surucu1",  full_name: "B Sürücü",   phone: "05550000911", role: "driver", vehicle: "V1" },
     { username: "yolcu1",   full_name: "B Yolcu",    phone: "05550000101", role: "passenger", vehicle: "V1", stop: [39.9208, 32.8541, "Kızılay, Ankara"] },
   ] as Person[],
-  windows: [["06:30", "09:30"], ["16:30", "19:30"]],
+  windows: [["to_factory", "06:10", 30, "09:30"], ["from_factory", "17:30", 30, "20:00"]] as [string, string, number, string][],
+  factory: { name: "Demo B Fabrika (OSTİM)", lat: 39.9690, lng: 32.7440, address: "OSTİM OSB, Yenimahalle, Ankara" },
 };
 
 async function wipeCompany(admin: SupabaseClient, code: string) {
@@ -100,12 +103,52 @@ async function seedCompany(admin: SupabaseClient, spec: typeof DEMO, password: s
   const windows = [];
   for (const vid of Object.values(vehicleIds))
     for (let d = 1; d <= 5; d++)
-      for (const [s, e] of spec.windows)
-        windows.push({ company_id: company.id, vehicle_id: vid, weekday: d, start_time: s, end_time: e });
+      for (const [dir, svc, lead, e] of spec.windows)
+        windows.push({ company_id: company.id, vehicle_id: vid, weekday: d, start_time: "00:00", end_time: e, direction: dir, service_time: svc, lead_minutes: lead });
   const { error: we } = await admin.from("visibility_windows").insert(windows);
   if (we) throw new Error(`pencere: ${we.message}`);
 
+  const { data: fac, error: fe } = await admin.from("factories")
+    .insert({ company_id: company.id, ...spec.factory }).select("id").single();
+  if (fe) throw new Error(`fabrika: ${fe.message}`);
+  await admin.from("vehicles").update({ factory_id: fac.id }).eq("company_id", company.id);
+
   return { company_id: company.id, vehicles: vehicleIds, users };
+}
+
+/** Mevcut demo verisini silmeden yeni özelliklere yükseltir: fabrika, servis saatleri, operasyon kullanıcısı. */
+async function upgradeCompany(admin: SupabaseClient, spec: typeof DEMO, password: string) {
+  const { data: c } = await admin.from("companies").select("id").eq("code", spec.code).maybeSingle();
+  if (!c) return null;
+  const out: string[] = [];
+  let { data: fac } = await admin.from("factories").select("id").eq("company_id", c.id).limit(1).maybeSingle();
+  if (!fac) {
+    const r = await admin.from("factories").insert({ company_id: c.id, ...spec.factory }).select("id").single();
+    if (r.error) throw new Error(`fabrika: ${r.error.message}`);
+    fac = r.data; out.push("fabrika eklendi");
+  }
+  await admin.from("vehicles").update({ factory_id: fac!.id }).eq("company_id", c.id).is("factory_id", null);
+  const { data: vs } = await admin.from("vehicles").select("id").eq("company_id", c.id);
+  for (const v of vs ?? []) {
+    await admin.from("visibility_windows").delete().eq("vehicle_id", v.id);
+    const rows = [];
+    for (let d = 1; d <= 5; d++) for (const [dir, svc, lead, e] of spec.windows)
+      rows.push({ company_id: c.id, vehicle_id: v.id, weekday: d, start_time: "00:00", end_time: e, direction: dir, service_time: svc, lead_minutes: lead });
+    const { error } = await admin.from("visibility_windows").insert(rows);
+    if (error) throw new Error(`pencere: ${error.message}`);
+  }
+  out.push("servis saatleri güncellendi");
+  for (const p of spec.people.filter((x) => x.role === "operator")) {
+    const { data: ex } = await admin.from("profiles").select("id").eq("company_id", c.id).eq("username", p.username).maybeSingle();
+    if (ex) continue;
+    const email = `u-${crypto.randomUUID().replaceAll("-", "")}@servis.local`;
+    const { data: u, error: ue } = await admin.auth.admin.createUser({ email, password, email_confirm: true, app_metadata: { company_id: c.id, role: p.role } });
+    if (ue || !u.user) throw new Error(`auth ${p.username}: ${ue?.message}`);
+    const { error: pe } = await admin.from("profiles").insert({ id: u.user.id, company_id: c.id, role: p.role, username: p.username, full_name: p.full_name, phone: p.phone, must_change_password: false });
+    if (pe) throw new Error(`profil ${p.username}: ${pe.message}`);
+    out.push(`${p.username} eklendi`);
+  }
+  return out;
 }
 
 Deno.serve(async (req) => {
@@ -126,6 +169,11 @@ Deno.serve(async (req) => {
     });
     if (error || !data.user) return json(500, { error: error?.message });
     return json(201, { ok: true, user_id: data.user.id });
+  }
+
+  if (body.action === "upgrade") {
+    try { return json(200, { ok: true, demo: await upgradeCompany(admin, DEMO, DEMO_PASSWORD), demo_b: await upgradeCompany(admin, DEMO_B, DEMO_PASSWORD) }); }
+    catch (e) { return json(500, { ok: false, error: String(e) }); }
   }
 
   try {

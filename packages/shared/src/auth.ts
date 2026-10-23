@@ -105,6 +105,7 @@ export function formatPhone(p: string | null | undefined): string {
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Yönetici',
+  operator: 'Operasyon sorumlusu',
   driver: 'Sürücü',
   passenger: 'Yolcu',
 };

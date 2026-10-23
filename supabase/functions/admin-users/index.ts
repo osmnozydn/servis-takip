@@ -7,7 +7,7 @@
 //   { action: "reset_password", user_id, password }
 //   { action: "delete", user_id }   (sürücünün belgeleri ve dosyaları da silinir)
 //
-// Çağıran kişi giriş yapmış bir ADMIN veya bir şirkete girmiş PLATFORM YÖNETİCİSİ olmalı. İşlemler her zaman çağıranın
+// Çağıran kişi giriş yapmış bir ADMIN / OPERASYON SORUMLUSU (yönetici ve operasyon hesaplarına dokunamaz) veya bir şirkete girmiş PLATFORM YÖNETİCİSİ olmalı. İşlemler her zaman çağıranın
 // kendi şirketinde yapılır; istek gövdesinde şirket bilgisi kabul edilmez.
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
@@ -28,7 +28,8 @@ function secretKey(): string {
   return Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 }
 
-const ROLES = ["admin", "driver", "passenger"] as const;
+const ROLES = ["admin", "operator", "driver", "passenger"] as const;
+const STAFF = new Set(["admin", "operator"]);
 const USERNAME_RE = /^[a-z0-9._-]{3,32}$/;
 
 function validPassword(p: unknown): p is string {
@@ -42,13 +43,14 @@ async function callerAdmin(admin: SupabaseClient, req: Request) {
   if (error || !data.user) return null;
   const { data: companyId } = await admin.rpc("admin_company_of", { p_uid: data.user.id });
   if (!companyId) return null;
-  return { id: data.user.id, company_id: companyId as string };
+  const { data: canManageStaff } = await admin.rpc("is_company_admin_uid", { p_uid: data.user.id });
+  return { id: data.user.id, company_id: companyId as string, canManageStaff: canManageStaff === true };
 }
 
 async function targetInCompany(admin: SupabaseClient, userId: unknown, companyId: string) {
   if (typeof userId !== "string") return null;
   const { data } = await admin
-    .from("profiles").select("id, company_id").eq("id", userId).eq("company_id", companyId).maybeSingle();
+    .from("profiles").select("id, company_id, role").eq("id", userId).eq("company_id", companyId).maybeSingle();
   return data;
 }
 
@@ -79,6 +81,7 @@ Deno.serve(async (req) => {
       if (role === "passenger" && stop && !vehicleId) return json(400, { error: "Durak için önce servis aracı seçin." });
 
       if (!ROLES.includes(role as typeof ROLES[number])) return json(400, { error: "Geçersiz rol" });
+      if (STAFF.has(role) && !me.canManageStaff) return json(403, { error: "Yönetici ve operasyon hesaplarını yalnızca şirket yöneticisi ekleyebilir." });
       if (!USERNAME_RE.test(username)) return json(400, { error: "Kullanıcı adı 3-32 karakter; küçük harf, rakam, . _ - içerebilir." });
       if (!fullName) return json(400, { error: "Ad soyad gerekli" });
       if (!validPassword(body.password)) return json(400, { error: "Şifre en az 8 karakter olmalı." });
@@ -125,6 +128,7 @@ Deno.serve(async (req) => {
       if (!validPassword(body.password)) return json(400, { error: "Şifre en az 8 karakter olmalı." });
       const t = await targetInCompany(admin, body.user_id, me.company_id);
       if (!t) return json(404, { error: "Kullanıcı bulunamadı" });
+      if (STAFF.has(t.role) && !me.canManageStaff && t.id !== me.id) return json(403, { error: "Bu hesabın şifresini yalnızca şirket yöneticisi sıfırlayabilir." });
       const { error } = await admin.auth.admin.updateUserById(t.id, { password: body.password });
       if (error) return json(500, { error: "Şifre güncellenemedi", detail: error.message });
       await admin.from("profiles").update({ must_change_password: true }).eq("id", t.id);
@@ -135,6 +139,7 @@ Deno.serve(async (req) => {
       const t = await targetInCompany(admin, body.user_id, me.company_id);
       if (!t) return json(404, { error: "Kullanıcı bulunamadı" });
       if (t.id === me.id) return json(400, { error: "Kendi hesabınızı silemezsiniz." });
+      if (STAFF.has(t.role) && !me.canManageStaff) return json(403, { error: "Yönetici ve operasyon hesaplarını yalnızca şirket yöneticisi silebilir." });
       const { data: docs } = await admin.from("documents").select("id, file_path")
         .eq("company_id", me.company_id).eq("owner_type", "driver").eq("owner_id", t.id);
       if (docs?.length) {

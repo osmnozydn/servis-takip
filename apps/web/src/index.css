@@ -49,11 +49,11 @@ a { color: var(--primary); }
 /* ---------- form öğeleri ---------- */
 form { display: flex; flex-direction: column; }
 label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; margin-bottom: 14px; }
-input:not([type=checkbox]):not([type=radio]):not([type=file]), select {
+input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]), select {
   font: inherit; font-weight: 400; padding: 10px 12px; min-height: 44px; border: 1px solid #D5DCE5; border-radius: var(--r);
   background: var(--surface); color: var(--text); min-width: 0; box-shadow: var(--sh-1); transition: border-color .15s, box-shadow .15s;
 }
-input:not([type=checkbox]):not([type=radio]):not([type=file]):hover, select:hover { border-color: #BCC6D3; }
+input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):hover, select:hover { border-color: #BCC6D3; }
 input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
 button { font: inherit; font-weight: 600; margin-top: 8px; background: linear-gradient(180deg, #245A8B, var(--primary)); color: #fff; border: 1px solid #1A4469;
   border-radius: var(--r); padding: 10px 18px; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(12,34,54,.18);
@@ -469,3 +469,70 @@ button.kpi.warn { border-color: #F2C9C9; background: linear-gradient(180deg, #FF
 .addrres li.nores { padding: 10px; font-size: 14px; }
 .addrres li.addrsrc { font-size: 11px; color: #9AA6B3; text-align: right; padding: 4px 8px 2px; }
 @media (prefers-reduced-motion: reduce) { .addrspin { animation-duration: 2s; } }
+
+/* =====================================================================
+   Operasyon: fabrikalar, servis saatleri, bildirim zili, yönetim ekibi
+   ===================================================================== */
+.tag.operator { background: #EDE7F6; color: #4A2F86; }
+.roles-info { display: grid; gap: 6px; font-size: 14px; background: #F7F9FC; border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin: 0 0 14px; }
+.roles-info .tag { margin-right: 6px; }
+
+.factories { display: grid; gap: 12px; margin-bottom: 14px; }
+button.factory { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: start; text-align: left;
+  background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px 18px; box-shadow: var(--sh-1); font-weight: 400; }
+button.factory:hover:not(:disabled) { background: #FBFCFE; border-color: #C9D3DF; box-shadow: var(--sh-2); }
+.factory-ic { width: 42px; height: 42px; border-radius: 12px; background: #FFF3D1; color: #8A5E00; display: grid; place-items: center; }
+.factory-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.factory-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.factory-main b { font-size: 16px; color: var(--ink); }
+.factory-main small { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.factory-meta { font-size: 13px; color: var(--muted); }
+.factory-plates { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+button.factory .go { color: var(--primary); font-weight: 600; align-self: center; }
+.field-block { margin-bottom: 14px; }
+.field-label { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.checklist { display: flex; flex-direction: column; gap: 2px; border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; max-height: 240px; overflow: auto; }
+.checklist label.check { align-items: center; margin: 0; padding: 6px 0; gap: 10px; }
+.checklist label.check input { margin-top: 0; }
+input[type=range] { width: 100%; accent-color: var(--amber); margin: 6px 0; }
+input[type=range]:focus { box-shadow: none; }
+
+.windows { gap: 12px; align-items: stretch; }
+.svc { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; background: #FBFCFE; }
+.svc-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.seg { display: inline-flex; background: #EEF1F5; border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { margin: 0; background: none; border: 0; box-shadow: none; color: var(--muted); padding: 6px 12px; font-size: 13.5px; border-radius: 8px; }
+.seg button:hover:not(:disabled) { background: rgba(255,255,255,.6); border: 0; color: var(--text); }
+.seg button.on, .seg button.on:hover:not(:disabled) { background: #fff; color: var(--ink); box-shadow: var(--sh-1); }
+.svc-times { display: flex; gap: 12px; flex-wrap: wrap; }
+.svc-times label { margin: 0; font-size: 13px; color: var(--muted); font-weight: 600; }
+.svc-times input, .svc-times select { min-width: 130px; }
+
+/* bildirim zili */
+.bell { position: relative; }
+.bell-btn { margin: 0; width: 40px; height: 40px; padding: 0; display: grid; place-items: center; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--sh-1); position: relative; }
+.bell-btn:hover:not(:disabled) { background: #F4F7FA; border-color: #C9D3DF; }
+.bell-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; stroke-linecap: round; }
+.bell-badge { position: absolute; top: -5px; right: -5px; min-width: 19px; height: 19px; padding: 0 5px; border-radius: 10px; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; border: 2px solid #fff; }
+.bell-pop { position: absolute; right: 0; top: 48px; width: min(380px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--sh-3); z-index: 1300; overflow: hidden; }
+.bell-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); }
+.bell-perm { margin: 10px 12px 0; width: calc(100% - 24px); background: #FFF8E6; color: #7A5A00; border: 1px solid #F2D58A; box-shadow: none; font-size: 13px; padding: 8px 10px; }
+.bell-perm:hover:not(:disabled) { background: #FFF2CC; border-color: #F2D58A; }
+.bell-pop ul { list-style: none; margin: 0; padding: 6px; max-height: 420px; overflow: auto; }
+.bell-pop li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px; border-radius: 10px; }
+.bell-pop li.unread { background: #F3F7FC; }
+.bell-pop li > i, .toast > i { width: 9px; height: 9px; border-radius: 50%; margin-top: 6px; background: #9AA6B3; }
+.bell-pop li.start > i, .toast.start > i { background: var(--primary); }
+.bell-pop li.done > i, .toast.done > i { background: var(--ok); }
+.bell-pop li.warn > i, .toast.warn > i { background: var(--danger); }
+.bn-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.bn-top b { font-size: 14px; color: var(--ink); }
+.bn-top span { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.bell-pop li p { margin: 2px 0 0; font-size: 13.5px; color: var(--text); line-height: 1.4; }
+.bell-empty { display: block !important; color: var(--muted); font-size: 14px; padding: 18px !important; text-align: center; }
+.toast { position: fixed; right: 24px; bottom: 24px; z-index: 1400; width: min(360px, calc(100vw - 32px)); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px;
+  background: var(--ink); color: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: 0 20px 40px -12px rgba(0,0,0,.45); cursor: pointer; animation: toastIn .25s ease-out; }
+.toast b { font-size: 14.5px; } .toast p { margin: 3px 0 0; font-size: 13.5px; color: #C9D6E3; line-height: 1.4; }
+@keyframes toastIn { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (max-width: 860px) { .top-right { gap: 8px; } .toast { right: 16px; bottom: 16px; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react';
 import { loadProfile, nextStep, type AuthStep, type SessionProfile } from '@servis/shared';
 import { supabase } from '../lib/supabase';
+import { unregisterPush } from '../notifications/notify';
 
 interface AuthState {
   loading: boolean;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const signOut = useCallback(async () => {
+    await unregisterPush();
     await supabase.auth.signOut();
     setProfile(null);
   }, []);

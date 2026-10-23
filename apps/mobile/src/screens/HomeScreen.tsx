@@ -21,7 +21,7 @@ export function HomeScreen() {
       <Card>
         <Row label="Şirket" value={profile.company?.name ?? '—'} />
         <Row label="Rol" value={ROLE_LABELS[profile.role]} />
-        {profile.role !== 'admin' ? (
+        {profile.role === 'driver' || profile.role === 'passenger' ? (
           <Row label="Servis aracı" value={profile.vehicle ? `${profile.vehicle.plate}${profile.vehicle.name ? ` · ${profile.vehicle.name}` : ''}` : 'Atanmamış'} />
         ) : null}
         <Row label="Kullanıcı adı" value={profile.username} />

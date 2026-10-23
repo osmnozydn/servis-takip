@@ -4,7 +4,10 @@
 
 export const APP_TIMEZONE = 'Europe/Istanbul';
 
-export type UserRole = 'admin' | 'driver' | 'passenger';
+export type UserRole = 'admin' | 'operator' | 'driver' | 'passenger';
+
+/** Yönetim paneli kullanıcıları (yönetici + operasyon sorumlusu) */
+export const isStaffRole = (r: UserRole | null | undefined) => r === 'admin' || r === 'operator';
 
 export interface Company {
   id: string;

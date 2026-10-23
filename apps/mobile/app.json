@@ -55,6 +55,13 @@
           "locationAlwaysPermission": "Servis süresince, uygulama arka plandayken de aracın konumunu yolculara iletebilmek için konumunuza erişmemiz gerekir.",
           "motionUsagePermission": false
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1F4E79",
+          "defaultChannel": "servis"
+        }
       ]
     ],
     "owner": "osmnozydn",

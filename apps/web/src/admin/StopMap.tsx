@@ -22,7 +22,7 @@ async function reverse(lat: number, lng: number): Promise<string> {
 }
 const shortAddress = (s: string) => s.split(', ').filter((p) => !/^(Türkiye|\d{5})$/.test(p)).slice(0, 4).join(', ');
 
-export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, path, search = true }: {
+export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, path, search = true, radius }: {
   stops?: MapStop[];
   picked?: PickedPoint | null;
   onPick?: (p: PickedPoint) => void;
@@ -33,11 +33,14 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, 
   path?: [number, number][] | null;
   /** Haritanın üstünde adres arama kutusu (form kendi adres alanını kullanıyorsa kapatılır) */
   search?: boolean;
+  /** Seçilen noktanın çevresine varış yarıçapı çiz (m) */
+  radius?: number;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
   const pickMarker = useRef<L.Marker | null>(null);
+  const pickCircle = useRef<L.Circle | null>(null);
   const markers = useRef<Record<string, L.Marker>>({});
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
@@ -56,7 +59,7 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, 
       onPickRef.current?.({ lat, lng, address });
     });
     map.current = m;
-    return () => { m.off(); m.stop(); m.remove(); map.current = null; pickMarker.current = null; markers.current = {}; };
+    return () => { m.off(); m.stop(); m.remove(); map.current = null; pickMarker.current = null; pickCircle.current = null; markers.current = {}; };
   }, []);
 
   // Duraklar
@@ -90,7 +93,11 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, 
   useEffect(() => {
     const m = map.current;
     if (!m) return;
-    if (!picked) { pickMarker.current?.remove(); pickMarker.current = null; return; }
+    if (!picked) { pickMarker.current?.remove(); pickMarker.current = null; pickCircle.current?.remove(); pickCircle.current = null; return; }
+    if (radius) {
+      if (!pickCircle.current) pickCircle.current = L.circle([picked.lat, picked.lng], { radius, color: '#F2A900', weight: 2, fillColor: '#F2A900', fillOpacity: .12, interactive: false }).addTo(m);
+      else { pickCircle.current.setLatLng([picked.lat, picked.lng]); pickCircle.current.setRadius(radius); }
+    }
     if (!pickMarker.current) {
       pickMarker.current = L.marker([picked.lat, picked.lng], { draggable: true, icon: pin('+', '#2E7D32', 30), zIndexOffset: 1000 }).addTo(m);
       pickMarker.current.on('dragend', async () => {
@@ -101,7 +108,7 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, 
       });
     } else pickMarker.current.setLatLng([picked.lat, picked.lng]);
     if (!m.getBounds().contains([picked.lat, picked.lng]) || m.getZoom() < 14) m.setView([picked.lat, picked.lng], 16, { animate: false });
-  }, [picked?.lat, picked?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [picked?.lat, picked?.lng, radius]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!focus || !map.current) return;

@@ -28,7 +28,7 @@ export function TripHistory() {
   useEffect(() => {
     setTrips(null); setSelected(null);
     let q = supabase.from('trips')
-      .select('id, vehicle_id, vehicle_plate, driver_name, service_date, started_at, ended_at, end_reason, distance_m, position_count')
+      .select('id, vehicle_id, vehicle_plate, driver_name, service_date, started_at, ended_at, end_reason, direction, distance_m, position_count')
       .eq('service_date', date).order('started_at');
     if (vehicleId) q = q.eq('vehicle_id', vehicleId);
     q.then(async ({ data }) => {
@@ -66,16 +66,17 @@ export function TripHistory() {
       ) : (
         <div className="tablewrap">
           <table className="clickable">
-            <thead><tr><th>Araç</th><th>Sürücü</th><th>Başlangıç</th><th>Bitiş</th><th>Mesafe</th><th>Duraklar</th><th></th></tr></thead>
+            <thead><tr><th>Araç</th><th>Servis</th><th>Sürücü</th><th>Başlangıç</th><th>Bitiş</th><th>Mesafe</th><th>Duraklar</th><th></th></tr></thead>
             <tbody>
               {trips.map((t) => {
                 const s = summary[t.id];
                 return (
                   <tr key={t.id} onClick={() => setSelected(t)}>
                     <td><b>{t.vehicle_plate}</b></td>
+                    <td>{t.direction === 'to_factory' ? 'Sabah · fabrikaya' : t.direction === 'from_factory' ? 'Akşam · fabrikadan' : '—'}</td>
                     <td>{t.driver_name ?? '—'}</td>
                     <td>{fmtTime(t.started_at)}</td>
-                    <td>{t.ended_at ? fmtTime(t.ended_at) : <span className="tag live">Devam ediyor</span>}</td>
+                    <td>{t.ended_at ? <>{fmtTime(t.ended_at)}{(t.end_reason === 'factory' || t.end_reason === 'last_stop') && <span className="tag arrived" title="Otomatik tamamlandı">oto</span>}</> : <span className="tag live">Devam ediyor</span>}</td>
                     <td>{fmtDistance(t.distance_m)}</td>
                     <td>
                       {s ? <>{s.arrived}/{s.total} varıldı{s.missed ? <span className="tag missed">{s.missed} uğranmadı</span> : null}</> : '—'}
@@ -147,7 +148,9 @@ function TripDetail({ trip, onBack }: { trip: Trip; onBack: () => void }) {
           <p className="muted" style={{ margin: 0 }}>
             {fmtDate(trip.service_date)} · {fmtTime(trip.started_at)}–{trip.ended_at ? fmtTime(trip.ended_at) : 'devam ediyor'}
             {' · '}{fmtDistance(trip.distance_m)} · {trip.position_count} konum
-            {trip.end_reason === 'inactivity' ? ' · sinyal kesildiği için otomatik kapandı' : ''}
+            {trip.end_reason === 'inactivity' ? ' · sinyal kesildiği için otomatik kapandı'
+              : trip.end_reason === 'factory' ? ' · fabrikaya varınca otomatik tamamlandı'
+              : trip.end_reason === 'last_stop' ? ' · son yolcuya ulaşınca otomatik tamamlandı' : ''}
           </p>
         </div>
         <button className="ghost small" onClick={exportCsv} disabled={!stops}>CSV indir</button>

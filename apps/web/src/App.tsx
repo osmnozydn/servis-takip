@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import {
   acceptConsent, changePassword, consentCheckboxLabel, consentSections, loadProfile, MIN_PASSWORD_LENGTH,
-  nextStep, ROLE_LABELS, signIn, validateNewPassword, type SessionProfile,
+  isStaffRole, nextStep, ROLE_LABELS, signIn, validateNewPassword, type SessionProfile,
 } from '@servis/shared';
 import { isConfigured, supabase } from './lib/supabase';
 import { AdminLayout, type Page } from './layout/AdminLayout';
@@ -13,6 +13,7 @@ import { Vehicles } from './admin/Vehicles';
 import { Drivers } from './admin/Drivers';
 import { Passengers } from './admin/Passengers';
 import { Admins } from './admin/Admins';
+import { Factories } from './admin/Factories';
 
 const LAST_CODE_KEY = 'last_company_code';
 const storage = {
@@ -177,7 +178,7 @@ function Consent({ profile, onDone, onSignOut }: { profile: SessionProfile; onDo
 
 const PAGE_TITLES: Record<Page, string> = {
   overview: 'Genel bakış', passengers: 'Yolcular ve duraklar', drivers: 'Sürücüler', vehicles: 'Araçlar',
-  trips: 'Sefer geçmişi', admins: 'Yöneticiler', platform: 'Şirketler',
+  factories: 'Fabrikalar', trips: 'Sefer geçmişi', admins: 'Yönetim ekibi', platform: 'Şirketler',
 };
 
 function Home({ profile, onSignOut, onRefresh }: { profile: SessionProfile; onSignOut: () => void; onRefresh: () => Promise<void> }) {
@@ -190,7 +191,7 @@ function Home({ profile, onSignOut, onRefresh }: { profile: SessionProfile; onSi
     setPage(id ? 'overview' : 'platform');
   }
 
-  if (profile.role !== 'admin') {
+  if (!isStaffRole(profile.role)) {
     return (
       <AuthShell>
         <h2>Merhaba, {profile.full_name.split(' ')[0]}</h2>
@@ -213,7 +214,8 @@ function Home({ profile, onSignOut, onRefresh }: { profile: SessionProfile; onSi
         {company && current === 'vehicles' && <Vehicles companyId={company.id} />}
         {company && current === 'drivers' && <Drivers companyId={company.id} companyCode={company.code} />}
         {company && current === 'passengers' && <Passengers companyId={company.id} companyCode={company.code} />}
-        {company && current === 'admins' && <Admins companyCode={company.code} myId={profile.id} />}
+        {company && current === 'factories' && <Factories />}
+        {company && current === 'admins' && <Admins companyCode={company.code} myId={profile.id} canManage={profile.role === 'admin' || profile.is_platform_admin} />}
       </div>
     </AdminLayout>
   );
