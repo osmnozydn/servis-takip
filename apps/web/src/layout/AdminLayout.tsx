@@ -43,7 +43,7 @@ export function AdminLayout({ profile, page, onNavigate, onSignOut, title, subti
   return (
     <div className="app">
       <aside className={`side ${open ? 'open' : ''}`} aria-label="Ana menü">
-        <div className="brand"><span className="logo">S</span><span>Servis Takip<small>Filo yönetimi</small></span></div>
+        <div className="brand"><span className="logo">R</span><span>READY LIVE<small>Filo yönetimi</small></span></div>
         {company ? (
           <div className="side-company">
             <div className="name">{company.name}</div>

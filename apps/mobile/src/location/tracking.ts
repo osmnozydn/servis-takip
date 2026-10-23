@@ -133,7 +133,7 @@ export async function startTracking(vehicleId: string) {
     activityType: Location.ActivityType.AutomotiveNavigation,
     showsBackgroundLocationIndicator: true,
     foregroundService: {
-      notificationTitle: 'Servis Takip',
+      notificationTitle: 'READY LIVE',
       notificationBody: 'Konumunuz servis yolcularıyla paylaşılıyor',
       notificationColor: '#1F4E79',
       killServiceOnDestroy: true,

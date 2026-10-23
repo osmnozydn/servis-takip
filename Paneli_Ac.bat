@@ -1,11 +1,11 @@
 @echo off
 chcp 65001 >nul
-title Servis Takip - Yönetim Paneli
+title READY LIVE - Yönetim Paneli
 cd /d "%~dp0"
 
 echo.
 echo  ==========================================
-echo    Servis Takip - Yönetim Paneli
+echo    READY LIVE - Yönetim Paneli
 echo  ==========================================
 echo.
 

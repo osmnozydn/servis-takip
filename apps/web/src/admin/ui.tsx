@@ -33,7 +33,7 @@ function CopyButton({ text }: { text: string }) {
 export function CredentialsBox({ title, companyCode, username, password, note }: {
   title: string; companyCode: string; username: string; password: string; note?: string;
 }) {
-  const text = `Servis Takip giriş bilgileriniz\nŞirket kodu: ${companyCode}\nKullanıcı adı: ${username}\nGeçici şifre: ${password}\nİlk girişte şifrenizi değiştirmeniz istenecek.`;
+  const text = `READY LIVE giriş bilgileriniz\nŞirket kodu: ${companyCode}\nKullanıcı adı: ${username}\nGeçici şifre: ${password}\nİlk girişte şifrenizi değiştirmeniz istenecek.`;
   return (
     <div className="cred">
       <div className="cred-head"><b>{title}</b><CopyButton text={text} /></div>

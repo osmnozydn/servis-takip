@@ -159,7 +159,7 @@ export function DriverHomeScreen() {
           <View style={styles.warn}>
             <Text style={styles.warnText}>
               {Platform.OS === 'ios'
-                ? 'Konum izni "Uygulamayı Kullanırken" olarak verildi. Servis sırasında uygulama arka plandayken de konum gönderilir (üstte mavi konum simgesi görünür). Kesintisiz çalışma için Ayarlar > Servis Takip > Konum > "Her Zaman" seçin.'
+                ? 'Konum izni "Uygulamayı Kullanırken" olarak verildi. Servis sırasında uygulama arka plandayken de konum gönderilir (üstte mavi konum simgesi görünür). Kesintisiz çalışma için Ayarlar > READY LIVE > Konum > "Her Zaman" seçin.'
                 : '"Her zaman" konum izni verilmedi. Uygulama arka plandayken konum gönderilemeyebilir.'}
             </Text>
             <Button title="Ayarları aç" variant="ghost" onPress={() => Linking.openSettings()} />

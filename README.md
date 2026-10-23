@@ -1,4 +1,4 @@
-# Servis Takip
+# READY LIVE
 
 Şirket bazlı servis aracı takip sistemi: sürücü canlı konum yayınlar, yolcu yetkili saatlerde aracı haritada görür, rota durak sırasına göre otomatik hesaplanır.
 

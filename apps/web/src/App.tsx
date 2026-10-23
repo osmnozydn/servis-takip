@@ -53,7 +53,7 @@ function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
   return (
     <div className={`auth ${wide ? 'auth-wide' : ''}`}>
       <aside className="auth-art">
-        <div className="brand"><span className="logo">S</span><span>Servis Takip<small>Filo yönetimi</small></span></div>
+        <div className="brand"><span className="logo">R</span><span>READY LIVE<small>Filo yönetimi</small></span></div>
         <h1>Servisleriniz, durak durak.</h1>
         <p>Araçlarınızı canlı izleyin, yolcuları alış sırasıyla yönetin, her seferin hangi durağa kaçta uğradığını görün.</p>
         <div className="art-stage">
@@ -73,7 +73,7 @@ function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
       </aside>
       <main className="auth-form">
         <div className="auth-box">{children}</div>
-        <div className="auth-legal">© {new Date().getFullYear()} Servis Takip · Her şirketin verisi ayrı tutulur</div>
+        <div className="auth-legal">© {new Date().getFullYear()} READY LIVE · Her şirketin verisi ayrı tutulur</div>
       </main>
     </div>
   );

@@ -22,8 +22,8 @@ export function Screen({ children, scroll = true }: { children: ReactNode; scrol
 export function Brand({ subtitle }: { subtitle?: string }) {
   return (
     <View style={styles.brand}>
-      <View style={styles.logo}><Text style={styles.logoText}>S</Text></View>
-      <Text style={styles.brandTitle}>Servis Takip</Text>
+      <View style={styles.logo}><Text style={styles.logoText}>R</Text></View>
+      <Text style={styles.brandTitle}>READY LIVE</Text>
       {subtitle ? <Text style={styles.brandSub}>{subtitle}</Text> : null}
     </View>
   );
