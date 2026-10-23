@@ -35,7 +35,7 @@ Testler tek transaction içinde çalışır ve sonunda ROLLBACK eder; veritaban�
 DB_URL="postgresql://postgres:...@...:5432/postgres" npm run db:test
 ```
 
-Test dosyaları: `rls_isolation.sql` (62), `login.sql` (16), `live_location.sql` (9), `routes.sql` (10), `trips.sql` (26), `admin_panel.sql` (36).
+Test dosyaları: `operations.sql` (46), `rls_isolation.sql` (62), `login.sql` (16), `live_location.sql` (9), `routes.sql` (10), `trips.sql` (26), `admin_panel.sql` (36).
 
 Supabase olmadan, düz Postgres'te denemek için önce `supabase/tests/support/supabase_shim.sql`, ardından migration'ı çalıştırın (bu shim'i gerçek projede çalıştırmayın).
 
@@ -82,6 +82,8 @@ KVKK metni `packages/shared/src/consent.ts` içinde **taslaktır**; canlıdan ö
 | `dev-admin` | **Geliştirme:** yönetim paneli uçtan uca testi — şirket açma, belge erişimi, alış sırası (37 test) |
 | `route-preview` | Yönetici: aracın yollardan geçen güzergâh önizlemesi (otomatik en hızlı sıra veya verilen sıra) |
 | `dev-roads` | **Geliştirme:** yol üzerinden rota testleri (12 test) |
+| `send-push` | Yeni bildirimleri telefonlara gönderir (Expo Push; veritabanı tetikler, x-internal-secret) |
+| `dev-ops` | **Geliştirme:** demo şirkete `operasyon` kullanıcısını ekler |
 | `dev-trip` | **Geliştirme:** demo sefer verisi üretir (bir durağa uğranmayan sefer dahil) ve sefer geçmişini doğrular (15 test) |
 
 `dev-*` fonksiyonları veritabanındaki gizli anahtarla korunur ve canlıya çıkmadan önce silinecektir.
@@ -161,6 +163,19 @@ Başka şirketin klasörüne yükleme/okuma yapılamaz (RLS + Storage politikala
 **Alış sırası:** her durağın `pickup_order` değeri vardır; yeni yolcu aracın sonuna eklenir, araç değiştiren yolcu
 yeni aracın sonuna taşınır. Aracın rota modu `manual` ise `compute-route` durakları bu sırayla gezer (yalnızca süre
 hesaplanır); `auto` ise en kısa sıra hesaplanır.
+
+## Operasyon: fabrikalar, servis saatleri, otomatik tamamlanma, bildirimler
+
+- **Roller:** Platform yöneticisi (süper yönetici, tüm şirketler) → Şirket yöneticisi → **Operasyon sorumlusu**
+  (yönetici ile aynı işleri yapar; yalnızca yönetim ekibine kişi ekleyemez/çıkaramaz). Demo: `operasyon` / `Demo.2026!`.
+- **Fabrikalar:** Şirkete birden çok fabrika; her araç bir fabrikaya bağlanır (panel → Fabrikalar). Varış yarıçapı varsayılan 150 m.
+- **Servis saatleri:** Her araç için sabah (duraklar → fabrika) ve akşam (fabrika → duraklar) servisleri; kalkış saati ve
+  yolcuya kaç dakika önce görüneceği (ör. 06:10 servisi 05:40'ta açılır). Saat dışında yolcu ekranında "Servis şu an aktif değil" uyarısı.
+- **Otomatik tamamlanma:** Sabah seferi araç fabrika yarıçapına girince, akşam seferi son yolcu durağına varılınca
+  kendiliğinden kapanır; sürücü uygulaması konum yayınını durdurur. Sonrasında gelen konumlar yeni sefer açmaz.
+- **Bildirimler:** Sefer başlayınca yönetim ekibine "Servis başladı", o aracın yolcularına (o gün gelmeyecekler hariç)
+  "Aracınız yola çıktı"; sefer bitince yönetim ekibine "Servis tamamlandı". Panelde zil + anlık uyarı; telefonda push
+  (Android push için EAS projesine Firebase/FCM anahtarı yüklenmeli; yoksa uygulama açıkken yerel bildirim gösterilir).
 
 ## Şema özeti (Faz 1)
 
