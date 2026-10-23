@@ -53,10 +53,18 @@ function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
   return (
     <div className={`auth ${wide ? 'auth-wide' : ''}`}>
       <aside className="auth-art">
-        <div className="brand"><span className="logo">S</span>Servis Takip</div>
+        <div className="brand"><span className="logo">S</span><span>Servis Takip<small>Filo yönetimi</small></span></div>
         <h1>Servisleriniz, durak durak.</h1>
         <p>Araçlarınızı canlı izleyin, yolcuları alış sırasıyla yönetin, her seferin hangi durağa kaçta uğradığını görün.</p>
-        <RouteArt />
+        <div className="art-stage">
+          <RouteArt />
+          <div className="glass livecard" aria-hidden="true">
+            <div className="lc-top"><span className="lc-dot" />Yolda · canlı</div>
+            <div className="lc-plate"><span className="plate"><span className="tr">TR</span><span className="no">34 SRV 07</span></span></div>
+            <div className="lc-row"><span>Sıradaki durak</span><b>Moda, Kadıköy</b></div>
+            <div className="lc-row"><span>Tahmini varış</span><b>3 dk</b></div>
+          </div>
+        </div>
         <ul className="auth-facts">
           <li>Canlı konum</li>
           <li>Durak durak rota</li>
@@ -65,6 +73,7 @@ function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) 
       </aside>
       <main className="auth-form">
         <div className="auth-box">{children}</div>
+        <div className="auth-legal">© {new Date().getFullYear()} Servis Takip · Her şirketin verisi ayrı tutulur</div>
       </main>
     </div>
   );

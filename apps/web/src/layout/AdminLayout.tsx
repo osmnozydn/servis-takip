@@ -16,14 +16,15 @@ const I = {
 };
 const Icon = ({ name }: { name: keyof typeof I }) => <svg viewBox="0 0 24 24" aria-hidden="true">{I[name]}</svg>;
 
-const COMPANY_PAGES: { id: Page; label: string }[] = [
+const COMPANY_PAGES: { id: Page; label: string; group?: string }[] = [
   { id: 'overview', label: 'Genel bakış' },
-  { id: 'passengers', label: 'Yolcular ve duraklar' },
-  { id: 'drivers', label: 'Sürücüler' },
+  { id: 'passengers', label: 'Yolcular ve duraklar', group: 'Operasyon' },
   { id: 'vehicles', label: 'Araçlar' },
-  { id: 'trips', label: 'Sefer geçmişi' },
-  { id: 'admins', label: 'Yöneticiler' },
+  { id: 'drivers', label: 'Sürücüler' },
+  { id: 'trips', label: 'Sefer geçmişi', group: 'Kayıtlar' },
+  { id: 'admins', label: 'Yöneticiler', group: 'Hesap' },
 ];
+const todayLabel = () => new Intl.DateTimeFormat('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Istanbul' }).format(new Date());
 
 export function AdminLayout({ profile, page, onNavigate, onSignOut, title, subtitle, children }: {
   profile: SessionProfile; page: Page; onNavigate: (p: Page) => void; onSignOut: () => void;
@@ -42,7 +43,7 @@ export function AdminLayout({ profile, page, onNavigate, onSignOut, title, subti
   return (
     <div className="app">
       <aside className={`side ${open ? 'open' : ''}`} aria-label="Ana menü">
-        <div className="brand"><span className="logo">S</span>Servis Takip</div>
+        <div className="brand"><span className="logo">S</span><span>Servis Takip<small>Filo yönetimi</small></span></div>
         {company ? (
           <div className="side-company">
             <div className="name">{company.name}</div>
@@ -53,11 +54,12 @@ export function AdminLayout({ profile, page, onNavigate, onSignOut, title, subti
           <div className="side-company"><div className="name">Şirket seçilmedi</div><div className="code">Yönetmek için bir şirkete girin.</div></div>
         ) : null}
         <nav>
-          {company && COMPANY_PAGES.map((p) => (
+          {company && COMPANY_PAGES.map((p) => [
+            p.group && <div key={`g-${p.group}`} className="group">{p.group}</div>,
             <button key={p.id} className={`navbtn ${page === p.id ? 'on' : ''}`} aria-current={page === p.id ? 'page' : undefined} onClick={() => onNavigate(p.id)}>
               <Icon name={p.id as keyof typeof I} />{p.label}
-            </button>
-          ))}
+            </button>,
+          ])}
           {profile.is_platform_admin && (<>
             <div className="group">Platform</div>
             <button className={`navbtn ${page === 'platform' ? 'on' : ''}`} aria-current={page === 'platform' ? 'page' : undefined} onClick={() => onNavigate('platform')}>
@@ -77,9 +79,14 @@ export function AdminLayout({ profile, page, onNavigate, onSignOut, title, subti
           <button className="menubtn" aria-label="Menüyü aç" aria-expanded={open} onClick={() => setOpen(true)}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
           </button>
-          <div>
-            <h1>{title}</h1>
+          <div className="titles">
             {subtitle && <div className="sub">{subtitle}</div>}
+            <h1>{title}</h1>
+          </div>
+          <div className="spacer" />
+          <div className="top-right">
+            <span className="top-date">{todayLabel()}</span>
+            <Avatar name={profile.full_name} />
           </div>
         </header>
         <div className="content">{children}</div>
