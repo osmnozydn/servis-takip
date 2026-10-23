@@ -451,3 +451,21 @@ button.kpi.warn { border-color: #F2C9C9; background: linear-gradient(180deg, #FF
 }
 @media (max-width: 520px) { .kpis { gap: 10px; } button.kpi { padding: 13px 14px 14px; } .kpi-val { font-size: 30px; } .kpi-sub { font-size: 12px; } }
 @media (prefers-reduced-motion: reduce) { .livepill i, .lc-dot { animation: none; } button, button.kpi::after { transition: none; } }
+
+/* adres önerileri (yazdıkça) */
+.addrinput { position: relative; display: flex; align-items: center; }
+.addrinput > svg { position: absolute; left: 12px; width: 18px; height: 18px; fill: none; stroke: #8A96A3; stroke-width: 2; stroke-linecap: round; pointer-events: none; }
+.addrinput input { width: 100%; padding-left: 38px !important; padding-right: 38px !important; }
+.addrspin { position: absolute; right: 12px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid #D5DCE5; border-top-color: var(--primary); animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.addrres { padding: 6px; border-radius: 12px; box-shadow: var(--sh-3); max-height: 340px; overflow: auto; font-weight: 400; }
+.addrres li[role=option] { display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
+.addrres li[role=option] svg { width: 18px; height: 18px; flex: none; margin-top: 2px; fill: none; stroke: #8A96A3; stroke-width: 1.8; }
+.addrres li[role=option] span { display: flex; flex-direction: column; min-width: 0; }
+.addrres li[role=option] b { font-weight: 600; color: var(--text); font-size: 14.5px; }
+.addrres li[role=option] small { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.addrres li.on { background: #F0F5FB; }
+.addrres li.on svg { stroke: var(--primary); }
+.addrres li.nores { padding: 10px; font-size: 14px; }
+.addrres li.addrsrc { font-size: 11px; color: #9AA6B3; text-align: right; padding: 4px 8px 2px; }
+@media (prefers-reduced-motion: reduce) { .addrspin { animation-duration: 2s; } }

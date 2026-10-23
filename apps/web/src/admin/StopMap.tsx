@@ -4,7 +4,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 export type MapStop = { id: string; lat: number; lng: number; label: string; title: string; muted?: boolean };
-export type PickedPoint = { lat: number; lng: number; address: string };
+import { AddressInput, type PickedPoint } from './AddressInput';
+export type { PickedPoint };
 
 const pin = (label: string, color: string, size = 26) => L.divIcon({
   className: '',
@@ -12,13 +13,6 @@ const pin = (label: string, color: string, size = 26) => L.divIcon({
   iconSize: [size, size], iconAnchor: [size / 2, size / 2],
 });
 
-/** OpenStreetMap Nominatim (anahtarsız). Canlıda Google Places ile değiştirilecek. */
-async function geocode(q: string): Promise<PickedPoint[]> {
-  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=tr&limit=6&accept-language=tr&q=${encodeURIComponent(q)}`);
-  if (!r.ok) return [];
-  const j = await r.json() as { lat: string; lon: string; display_name: string }[];
-  return j.map((x) => ({ lat: +x.lat, lng: +x.lon, address: shortAddress(x.display_name) }));
-}
 async function reverse(lat: number, lng: number): Promise<string> {
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=17&accept-language=tr&lat=${lat}&lon=${lng}`);
@@ -28,7 +22,7 @@ async function reverse(lat: number, lng: number): Promise<string> {
 }
 const shortAddress = (s: string) => s.split(', ').filter((p) => !/^(Türkiye|\d{5})$/.test(p)).slice(0, 4).join(', ');
 
-export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, path }: {
+export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, path, search = true }: {
   stops?: MapStop[];
   picked?: PickedPoint | null;
   onPick?: (p: PickedPoint) => void;
@@ -37,6 +31,8 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, 
   focus?: string | null;
   /** Yollardan geçen güzergâh (enlem, boylam). Yoksa duraklar arası kesikli tahmini çizgi. */
   path?: [number, number][] | null;
+  /** Haritanın üstünde adres arama kutusu (form kendi adres alanını kullanıyorsa kapatılır) */
+  search?: boolean;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -104,7 +100,7 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, 
         onPickRef.current?.({ lat: p.lat, lng: p.lng, address });
       });
     } else pickMarker.current.setLatLng([picked.lat, picked.lng]);
-    if (!m.getBounds().contains([picked.lat, picked.lng])) m.setView([picked.lat, picked.lng], 15, { animate: false });
+    if (!m.getBounds().contains([picked.lat, picked.lng]) || m.getZoom() < 14) m.setView([picked.lat, picked.lng], 16, { animate: false });
   }, [picked?.lat, picked?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -115,34 +111,14 @@ export function StopMap({ stops = [], picked, onPick, end, height = 380, focus, 
 
   return (
     <div className="stopmap">
-      {onPick && <AddressSearch onSelect={(p) => { onPick(p); map.current?.setView([p.lat, p.lng], 16, { animate: false }); }} />}
+      {onPick && search && <MapSearch onSelect={(p) => { onPick(p); map.current?.setView([p.lat, p.lng], 16, { animate: false }); }} />}
       <div ref={el} className="tripmap" style={{ height }} />
-      {onPick && <small className="muted">Adresi arayın veya haritada noktanın olduğu yere tıklayın. İşareti sürükleyerek düzeltebilirsiniz.</small>}
+      {onPick && <small className="muted">Adresi yazıp önerilerden seçin veya haritada noktanın olduğu yere tıklayın. İşareti sürükleyerek düzeltebilirsiniz.</small>}
     </div>
   );
 }
 
-function AddressSearch({ onSelect }: { onSelect: (p: PickedPoint) => void }) {
+function MapSearch({ onSelect }: { onSelect: (p: PickedPoint) => void }) {
   const [q, setQ] = useState('');
-  const [res, setRes] = useState<PickedPoint[] | null>(null);
-  const [busy, setBusy] = useState(false);
-  async function search() {
-    if (q.trim().length < 3) return;
-    setBusy(true); setRes(await geocode(q).catch(() => [])); setBusy(false);
-  }
-  return (
-    <div className="addrsearch">
-      <div className="inline">
-        <input value={q} placeholder="Adres veya yer ara (örn. Moda Caddesi Kadıköy)" onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void search(); } }} />
-        <button type="button" className="ghost small" onClick={search} disabled={busy}>{busy ? 'Aranıyor…' : 'Ara'}</button>
-      </div>
-      {res && (
-        <ul className="addrres">
-          {res.length === 0 && <li className="muted">Sonuç bulunamadı. Haritada tıklayarak seçebilirsiniz.</li>}
-          {res.map((r, i) => <li key={i}><button type="button" className="link" onClick={() => { onSelect(r); setRes(null); }}>{r.address}</button></li>)}
-        </ul>
-      )}
-    </div>
-  );
+  return <AddressInput value={q} onChange={setQ} onSelect={(p) => { setQ(p.address); onSelect(p); }} />;
 }

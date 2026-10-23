@@ -4,6 +4,7 @@ import { formatPhone } from '@servis/shared';
 import { supabase } from '../lib/supabase';
 import { callFn, decodePolyline, fmtKm, fmtMin, genPassword, normalizePhone, PERSON_COLUMNS, pgError, slugUsername, VEHICLE_COLUMNS, type PersonRow, type VehicleRow } from './common';
 import { StopMap, type MapStop, type PickedPoint } from './StopMap';
+import { AddressInput } from './AddressInput';
 import { CredentialsBox, Field, Notice, PasswordField, Plate } from './ui';
 
 type Ctx = { companyId: string; companyCode: string };
@@ -294,12 +295,15 @@ function PassengerForm({ companyCode, vehicles, passenger, defaultVehicle = '', 
                 {vehicles.map((v) => <option key={v.id} value={v.id}>{v.plate}{v.name ? ` · ${v.name}` : ''}</option>)}
               </select>
             </Field>
-            <Field label="Durak adresi / tarifi" hint="Sürücünün göreceği kısa tarif (örn. Moda Cd. eczane önü).">
-              <input value={address} onChange={(e) => { setAddress(e.target.value); setAddrTouched(true); }} placeholder="Haritadan seçince otomatik dolar" />
+            <Field label="Durak adresi / tarifi" hint="Yazdıkça adres önerileri çıkar. Seçtikten sonra tarif ekleyebilirsiniz (örn. eczane önü).">
+              <AddressInput value={address} placeholder="Adres yazın, önerilerden seçin (örn. Moda Caddesi)"
+                bias={point ?? (others[0] ? { lat: others[0].lat, lng: others[0].lng } : null)}
+                onChange={(t) => { setAddress(t); setAddrTouched(true); }}
+                onSelect={(p) => { setPoint(p); setAddress(p.address); setAddrTouched(false); }} />
             </Field>
             {point ? <small className="muted">Durak konumu: {point.lat.toFixed(5)}, {point.lng.toFixed(5)}</small> : <small className="muted">Durak henüz seçilmedi.</small>}
           </div>
-          <StopMap picked={point} onPick={pick} stops={others.map((s) => ({ ...s, muted: true }))} height={400} />
+          <StopMap picked={point} onPick={pick} search={false} stops={others.map((s) => ({ ...s, muted: true }))} height={400} />
         </div>
         {error && <Notice kind="err">{error}</Notice>}
         {saved && <Notice kind="ok">Kaydedildi.</Notice>}
